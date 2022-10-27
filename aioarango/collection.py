@@ -1,12 +1,10 @@
-__all__ = ["StandardCollection", "VertexCollection", "EdgeCollection"]
-
 from numbers import Number
 from typing import List, Optional, Sequence, Tuple, Union
 
-from arango.api import ApiGroup
-from arango.connection import Connection
-from arango.cursor import Cursor
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.connection import Connection
+from aioarango.cursor import Cursor
+from aioarango.exceptions import (
     ArangoServerError,
     CollectionChecksumError,
     CollectionConfigureError,
@@ -36,13 +34,14 @@ from arango.exceptions import (
     IndexListError,
     IndexLoadError,
 )
-from arango.executor import ApiExecutor
-from arango.formatter import format_collection, format_edge, format_index, format_vertex
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Fields, Headers, Json, Params
-from arango.utils import get_batches, get_doc_id, is_none_or_int, is_none_or_str
+
+from aioarango.executor import ApiExecutor
+from aioarango.formatter import format_collection, format_edge, format_index, format_vertex
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Fields, Headers, Json, Params
+from aioarango.utils import get_batches, get_doc_id, is_none_or_int, is_none_or_str
 
 
 class Collection(ApiGroup):
@@ -71,14 +70,14 @@ class Collection(ApiGroup):
         self._name = name
         self._id_prefix = name + "/"
 
-    def __iter__(self) -> Result[Cursor]:
-        return self.all()
+    # def __iter__(self) -> Result[Cursor]:
+    #     return self.all()
 
-    def __len__(self) -> Result[int]:
-        return self.count()
+    # def __len__(self) -> Result[int]:
+    #     return self.count()
 
-    def __contains__(self, document: Union[str, Json]) -> Result[bool]:
-        return self.has(document, check_rev=False)
+    # def __contains__(self, document: Union[str, Json]) -> Result[bool]:
+    #     return self.has(document, check_rev=False)
 
     def _get_status_text(self, code: int) -> str:  # pragma: no cover
         """Return the collection status text.
@@ -97,7 +96,7 @@ class Collection(ApiGroup):
         :type doc_id: str
         :return: Verified document ID.
         :rtype: str
-        :raise arango.exceptions.DocumentParseError: On bad collection name.
+        :raise aioarango.exceptions.DocumentParseError: On bad collection name.
         """
         if not doc_id.startswith(self._id_prefix):
             raise DocumentParseError(f'bad collection name in document ID "{doc_id}"')
@@ -110,7 +109,7 @@ class Collection(ApiGroup):
         :type body: dict
         :return: Document ID.
         :rtype: str
-        :raise arango.exceptions.DocumentParseError: On missing ID and key.
+        :raise aioarango.exceptions.DocumentParseError: On missing ID and key.
         """
         try:
             if "_id" in body:
@@ -176,7 +175,7 @@ class Collection(ApiGroup):
         :type body: dict
         :return: Document body with "_key" field.
         :rtype: dict
-        :raise arango.exceptions.DocumentParseError: On missing ID and key.
+        :raise aioarango.exceptions.DocumentParseError: On missing ID and key.
         """
         if "_key" in body:
             return body
@@ -210,12 +209,12 @@ class Collection(ApiGroup):
         """
         return self._name
 
-    def recalculate_count(self) -> Result[bool]:
+    async def recalculate_count(self) -> Result[bool]:
         """Recalculate the document count.
 
         :return: True if recalculation was successful.
         :rtype: bool
-        :raise arango.exceptions.CollectionRecalculateCountError: If operation fails.
+        :raise aioarango.exceptions.CollectionRecalculateCountError: If operation fails.
         """
         request = Request(
             method="put",
@@ -227,9 +226,9 @@ class Collection(ApiGroup):
                 return True
             raise CollectionRecalculateCountError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def responsible_shard(self, document: Json) -> Result[str]:  # pragma: no cover
+    async def responsible_shard(self, document: Json) -> Result[str]:  # pragma: no cover
         """Return the ID of the shard responsible for given **document**.
 
         If the document does not exist, return the shard that would be
@@ -250,9 +249,9 @@ class Collection(ApiGroup):
                 return str(resp.body["shardId"])
             raise CollectionResponsibleShardError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def rename(self, new_name: str) -> Result[bool]:
+    async def rename(self, new_name: str) -> Result[bool]:
         """Rename the collection.
 
         Renames may not be reflected immediately in async execution, batch
@@ -263,7 +262,7 @@ class Collection(ApiGroup):
         :type new_name: str
         :return: True if collection was renamed successfully.
         :rtype: bool
-        :raise arango.exceptions.CollectionRenameError: If rename fails.
+        :raise aioarango.exceptions.CollectionRenameError: If rename fails.
         """
         request = Request(
             method="put",
@@ -278,14 +277,14 @@ class Collection(ApiGroup):
             self._id_prefix = new_name + "/"
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def properties(self) -> Result[Json]:
+    async def properties(self) -> Result[Json]:
         """Return collection properties.
 
         :return: Collection properties.
         :rtype: dict
-        :raise arango.exceptions.CollectionPropertiesError: If retrieval fails.
+        :raise aioarango.exceptions.CollectionPropertiesError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -298,12 +297,10 @@ class Collection(ApiGroup):
                 return format_collection(resp.body)
             raise CollectionPropertiesError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def configure(
-        self,
-        sync: Optional[bool] = None,
-        schema: Optional[Json] = None,
+    async def configure(
+        self, sync: Optional[bool] = None, schema: Optional[Json] = None,
         replication_factor: Optional[int] = None,
         write_concern: Optional[int] = None,
     ) -> Result[Json]:
@@ -330,7 +327,7 @@ class Collection(ApiGroup):
         :type write_concern: int
         :return: New collection properties.
         :rtype: dict
-        :raise arango.exceptions.CollectionConfigureError: If operation fails.
+        :raise aioarango.exceptions.CollectionConfigureError: If operation fails.
         """
         data: Json = {}
         if sync is not None:
@@ -353,14 +350,14 @@ class Collection(ApiGroup):
                 raise CollectionConfigureError(resp, request)
             return format_collection(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def statistics(self) -> Result[Json]:
+    async def statistics(self) -> Result[Json]:
         """Return collection statistics.
 
         :return: Collection statistics.
         :rtype: dict
-        :raise arango.exceptions.CollectionStatisticsError: If retrieval fails.
+        :raise aioarango.exceptions.CollectionStatisticsError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -393,14 +390,14 @@ class Collection(ApiGroup):
                 )
             return stats
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def revision(self) -> Result[str]:
+    async def revision(self) -> Result[str]:
         """Return collection revision.
 
         :return: Collection revision.
         :rtype: str
-        :raise arango.exceptions.CollectionRevisionError: If retrieval fails.
+        :raise aioarango.exceptions.CollectionRevisionError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -413,9 +410,9 @@ class Collection(ApiGroup):
                 return str(resp.body["revision"])
             raise CollectionRevisionError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def checksum(self, with_rev: bool = False, with_data: bool = False) -> Result[str]:
+    async def checksum(self, with_rev: bool = False, with_data: bool = False) -> Result[str]:
         """Return collection checksum.
 
         :param with_rev: Include document revisions in checksum calculation.
@@ -424,7 +421,7 @@ class Collection(ApiGroup):
         :type with_data: bool
         :return: Collection checksum.
         :rtype: str
-        :raise arango.exceptions.CollectionChecksumError: If retrieval fails.
+        :raise aioarango.exceptions.CollectionChecksumError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -437,14 +434,14 @@ class Collection(ApiGroup):
                 return str(resp.body["checksum"])
             raise CollectionChecksumError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def load(self) -> Result[bool]:
+    async def load(self) -> Result[bool]:
         """Load the collection into memory.
 
         :return: True if collection was loaded successfully.
         :rtype: bool
-        :raise arango.exceptions.CollectionLoadError: If operation fails.
+        :raise aioarango.exceptions.CollectionLoadError: If operation fails.
         """
         request = Request(method="put", endpoint=f"/_api/collection/{self.name}/load")
 
@@ -453,14 +450,14 @@ class Collection(ApiGroup):
                 raise CollectionLoadError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def unload(self) -> Result[bool]:
+    async def unload(self) -> Result[bool]:
         """Unload the collection from memory.
 
         :return: True if collection was unloaded successfully.
         :rtype: bool
-        :raise arango.exceptions.CollectionUnloadError: If operation fails.
+        :raise aioarango.exceptions.CollectionUnloadError: If operation fails.
         """
         request = Request(method="put", endpoint=f"/_api/collection/{self.name}/unload")
 
@@ -469,14 +466,14 @@ class Collection(ApiGroup):
                 raise CollectionUnloadError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def truncate(self) -> Result[bool]:
+    async def truncate(self) -> Result[bool]:
         """Delete all documents in the collection.
 
         :return: True if collection was truncated successfully.
         :rtype: bool
-        :raise arango.exceptions.CollectionTruncateError: If operation fails.
+        :raise aioarango.exceptions.CollectionTruncateError: If operation fails.
         """
         request = Request(
             method="put", endpoint=f"/_api/collection/{self.name}/truncate"
@@ -487,14 +484,14 @@ class Collection(ApiGroup):
                 raise CollectionTruncateError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def count(self) -> Result[int]:
+    async def count(self) -> Result[int]:
         """Return the total document count.
 
         :return: Total document count.
         :rtype: int
-        :raise arango.exceptions.DocumentCountError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentCountError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/collection/{self.name}/count")
 
@@ -504,9 +501,9 @@ class Collection(ApiGroup):
                 return result
             raise DocumentCountError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def has(
+    async def has(
         self,
         document: Union[str, Json],
         rev: Optional[str] = None,
@@ -528,8 +525,8 @@ class Collection(ApiGroup):
         :type allow_dirty_read: bool | None
         :return: True if document exists, False otherwise.
         :rtype: bool
-        :raise arango.exceptions.DocumentInError: If check fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentInError: If check fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, body, headers = self._prep_from_doc(document, rev, check_rev)
 
@@ -552,14 +549,14 @@ class Collection(ApiGroup):
                 raise DocumentInError(resp, request)
             return bool(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def ids(self) -> Result[Cursor]:
+    async def ids(self) -> Result[Cursor]:
         """Return the IDs of all documents in the collection.
 
         :return: Document ID cursor.
-        :rtype: arango.cursor.Cursor
-        :raise arango.exceptions.DocumentIDsError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raise aioarango.exceptions.DocumentIDsError: If retrieval fails.
         """
         request = Request(
             method="put",
@@ -573,14 +570,14 @@ class Collection(ApiGroup):
                 raise DocumentIDsError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def keys(self) -> Result[Cursor]:
+    async def keys(self) -> Result[Cursor]:
         """Return the keys of all documents in the collection.
 
         :return: Document key cursor.
-        :rtype: arango.cursor.Cursor
-        :raise arango.exceptions.DocumentKeysError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raise aioarango.exceptions.DocumentKeysError: If retrieval fails.
         """
         request = Request(
             method="put",
@@ -594,9 +591,9 @@ class Collection(ApiGroup):
                 raise DocumentKeysError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def all(
+    async def all(
         self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> Result[Cursor]:
         """Return all documents in the collection.
@@ -606,8 +603,8 @@ class Collection(ApiGroup):
         :param limit: Max number of documents returned.
         :type limit: int | None
         :return: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert is_none_or_int(skip), "skip must be a non-negative int"
         assert is_none_or_int(limit), "limit must be a non-negative int"
@@ -627,9 +624,70 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def find(
+    async def export(
+        self,
+        limit: Optional[int] = None,
+        count: bool = False,
+        batch_size: Optional[int] = None,
+        flush: bool = False,
+        flush_wait: Optional[int] = None,
+        ttl: Optional[Number] = None,
+        filter_fields: Optional[Sequence[str]] = None,
+        filter_type: str = "include",
+    ) -> Result[Cursor]:
+        """Export all documents in the collection using a server cursor.
+
+        :param flush: If set to True, flush the write-ahead log prior to the
+            export. If set to False, documents in the write-ahead log during
+            the export are not included in the result.
+        :type flush: bool
+        :param flush_wait: Max wait time in seconds for write-ahead log flush.
+        :type flush_wait: int | None
+        :param count: Include the document count in the server cursor.
+        :type count: bool
+        :param batch_size: Max number of documents in the batch fetched by
+            the cursor in one round trip.
+        :type batch_size: int | None
+        :param limit: Max number of documents fetched by the cursor.
+        :type limit: int | None
+        :param ttl: Time-to-live for the cursor on the server.
+        :type ttl: int | float | None
+        :param filter_fields: Document fields to filter with.
+        :type filter_fields: [str] | None
+        :param filter_type: Allowed values are "include" or "exclude".
+        :type filter_type: str
+        :return: Document cursor.
+        :rtype: aioarango.cursor.Cursor
+        :raise aioarango.exceptions.DocumentGetError: If export fails.
+        """
+        data: Json = {"count": count, "flush": flush}
+        if flush_wait is not None:
+            data["flushWait"] = flush_wait
+        if batch_size is not None:
+            data["batchSize"] = batch_size
+        if limit is not None:
+            data["limit"] = limit
+        if ttl is not None:
+            data["ttl"] = ttl
+        if filter_fields is not None:
+            data["restrict"] = {"fields": filter_fields, "type": filter_type}
+        request = Request(
+            method="post",
+            endpoint="/_api/export",
+            params={"collection": self.name},
+            data=data,
+        )
+
+        def response_handler(resp: Response) -> Cursor:
+            if not resp.is_success:
+                raise DocumentGetError(resp, request)
+            return Cursor(self._conn, resp.body, "export")
+
+        return await self._execute(request, response_handler)
+
+    async def find(
         self, filters: Json, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> Result[Cursor]:
         """Return all documents that match the given filters.
@@ -641,8 +699,8 @@ class Collection(ApiGroup):
         :param limit: Max number of documents returned.
         :type limit: int | None
         :return: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert isinstance(filters, dict), "filters must be a dict"
         assert is_none_or_int(skip), "skip must be a non-negative int"
@@ -665,14 +723,10 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def find_near(
-        self,
-        latitude: Number,
-        longitude: Number,
-        limit: Optional[int] = None,
-        allow_dirty_read: bool = False,
+    async def find_near(
+        self, latitude: Number, longitude: Number, limit: Optional[int] = None, allow_dirty_read: bool = False,
     ) -> Result[Cursor]:
         """Return documents near a given coordinate.
 
@@ -690,8 +744,8 @@ class Collection(ApiGroup):
         :param allow_dirty_read: Allow reads from followers in a cluster.
         :type allow_dirty_read: bool | None
         :returns: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raises arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raises aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert isinstance(latitude, Number), "latitude must be a number"
         assert isinstance(longitude, Number), "longitude must be a number"
@@ -725,9 +779,9 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def find_in_range(
+    async def find_in_range(
         self,
         field: str,
         lower: int,
@@ -753,8 +807,8 @@ class Collection(ApiGroup):
         :param allow_dirty_read: Allow reads from followers in a cluster.
         :type allow_dirty_read: bool | None
         :returns: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raises arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raises aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert is_none_or_int(skip), "skip must be a non-negative int"
         assert is_none_or_int(limit), "limit must be a non-negative int"
@@ -788,9 +842,9 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def find_in_radius(
+    async def find_in_radius(
         self,
         latitude: Number,
         longitude: Number,
@@ -814,8 +868,8 @@ class Collection(ApiGroup):
         :param allow_dirty_read: Allow reads from followers in a cluster.
         :type allow_dirty_read: bool | None
         :returns: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raises arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raises aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert isinstance(latitude, Number), "latitude must be a number"
         assert isinstance(longitude, Number), "longitude must be a number"
@@ -851,9 +905,9 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def find_in_box(
+    async def find_in_box(
         self,
         latitude1: Number,
         longitude1: Number,
@@ -881,8 +935,8 @@ class Collection(ApiGroup):
             prefix). This parameter is ignored in transactions.
         :type index: str | None
         :returns: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raises arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raises aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert isinstance(latitude1, Number), "latitude1 must be a number"
         assert isinstance(longitude1, Number), "longitude1 must be a number"
@@ -917,14 +971,10 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def find_by_text(
-        self,
-        field: str,
-        query: str,
-        limit: Optional[int] = None,
-        allow_dirty_read: bool = False,
+    async def find_by_text(
+        self, field: str, query: str, limit: Optional[int] = None,  allow_dirty_read: bool = False,
     ) -> Result[Cursor]:
         """Return documents that match the given fulltext query.
 
@@ -937,8 +987,8 @@ class Collection(ApiGroup):
         :param allow_dirty_read: Allow reads from followers in a cluster.
         :type allow_dirty_read: bool | None
         :returns: Document cursor.
-        :rtype: arango.cursor.Cursor
-        :raises arango.exceptions.DocumentGetError: If retrieval fails.
+        :rtype: aioarango.cursor.Cursor
+        :raises aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         assert is_none_or_int(limit), "limit must be a non-negative int"
 
@@ -970,13 +1020,9 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def get_many(
-        self,
-        documents: Sequence[Union[str, Json]],
-        allow_dirty_read: bool = False,
-    ) -> Result[List[Json]]:
+    async def get_many(self, documents: Sequence[Union[str, Json]], allow_dirty_read: bool = False,) -> Result[List[Json]]:
         """Return multiple documents ignoring any missing ones.
 
         :param documents: List of document keys, IDs or bodies. Document bodies
@@ -986,7 +1032,7 @@ class Collection(ApiGroup):
         :type allow_dirty_read: bool | None
         :return: Documents. Missing ones are not included.
         :rtype: [dict]
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         handles = [self._extract_id(d) if isinstance(d, dict) else d for d in documents]
 
@@ -1006,14 +1052,14 @@ class Collection(ApiGroup):
                 raise DocumentGetError(resp, request)
             return [doc for doc in resp.body if "_id" in doc]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def random(self) -> Result[Json]:
+    async def random(self) -> Result[Json]:
         """Return a random document from the collection.
 
         :return: A random document.
         :rtype: dict
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
         """
         request = Request(
             method="put",
@@ -1028,18 +1074,18 @@ class Collection(ApiGroup):
                 return result
             raise DocumentGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ####################
     # Index Management #
     ####################
 
-    def indexes(self) -> Result[List[Json]]:
+    async def indexes(self) -> Result[List[Json]]:
         """Return the collection indexes.
 
         :return: Collection indexes.
         :rtype: [dict]
-        :raise arango.exceptions.IndexListError: If retrieval fails.
+        :raise aioarango.exceptions.IndexListError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -1053,16 +1099,16 @@ class Collection(ApiGroup):
             result = resp.body["indexes"]
             return [format_index(index) for index in result]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def _add_index(self, data: Json) -> Result[Json]:
+    async def _add_index(self, data: Json) -> Result[Json]:
         """Helper method for creating a new index.
 
         :param data: Index data.
         :type data: dict
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         request = Request(
             method="post",
@@ -1076,9 +1122,9 @@ class Collection(ApiGroup):
                 raise IndexCreateError(resp, request)
             return format_index(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def add_hash_index(
+    async def add_hash_index(
         self,
         fields: Sequence[str],
         unique: Optional[bool] = None,
@@ -1105,7 +1151,7 @@ class Collection(ApiGroup):
         :type in_background: bool | None
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         data: Json = {"type": "hash", "fields": fields}
 
@@ -1120,9 +1166,9 @@ class Collection(ApiGroup):
         if in_background is not None:
             data["inBackground"] = in_background
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def add_skiplist_index(
+    async def add_skiplist_index(
         self,
         fields: Sequence[str],
         unique: Optional[bool] = None,
@@ -1149,7 +1195,7 @@ class Collection(ApiGroup):
         :type in_background: bool | None
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         data: Json = {"type": "skiplist", "fields": fields}
 
@@ -1164,9 +1210,9 @@ class Collection(ApiGroup):
         if in_background is not None:
             data["inBackground"] = in_background
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def add_geo_index(
+    async def add_geo_index(
         self,
         fields: Fields,
         ordered: Optional[bool] = None,
@@ -1192,7 +1238,7 @@ class Collection(ApiGroup):
         :type legacyPolygons: bool | None
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         data: Json = {"type": "geo", "fields": fields}
 
@@ -1205,9 +1251,9 @@ class Collection(ApiGroup):
         if legacyPolygons is not None:
             data["legacyPolygons"] = legacyPolygons
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def add_fulltext_index(
+    async def add_fulltext_index(
         self,
         fields: Sequence[str],
         min_length: Optional[int] = None,
@@ -1228,7 +1274,7 @@ class Collection(ApiGroup):
         :type in_background: bool | None
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         data: Json = {"type": "fulltext", "fields": fields}
 
@@ -1239,9 +1285,9 @@ class Collection(ApiGroup):
         if in_background is not None:
             data["inBackground"] = in_background
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def add_persistent_index(
+    async def add_persistent_index(
         self,
         fields: Sequence[str],
         unique: Optional[bool] = None,
@@ -1280,7 +1326,7 @@ class Collection(ApiGroup):
         :type cacheEnabled: bool | None
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         data: Json = {"type": "persistent", "fields": fields}
 
@@ -1297,9 +1343,9 @@ class Collection(ApiGroup):
         if cacheEnabled is not None:
             data["cacheEnabled"] = cacheEnabled
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def add_ttl_index(
+    async def add_ttl_index(
         self,
         fields: Sequence[str],
         expiry_time: int,
@@ -1318,7 +1364,7 @@ class Collection(ApiGroup):
         :type in_background: bool | None
         :return: New index details.
         :rtype: dict
-        :raise arango.exceptions.IndexCreateError: If create fails.
+        :raise aioarango.exceptions.IndexCreateError: If create fails.
         """
         data: Json = {"type": "ttl", "fields": fields, "expireAfter": expiry_time}
 
@@ -1327,9 +1373,9 @@ class Collection(ApiGroup):
         if in_background is not None:
             data["inBackground"] = in_background
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def add_inverted_index(
+    async def add_inverted_index(
         self,
         fields: Json,
         name: Optional[str] = None,
@@ -1396,9 +1442,9 @@ class Collection(ApiGroup):
         if fields is not None:
             data["fields"] = fields
 
-        return self._add_index(data)
+        return await self._add_index(data)
 
-    def delete_index(self, index_id: str, ignore_missing: bool = False) -> Result[bool]:
+    async def delete_index(self, index_id: str, ignore_missing: bool = False) -> Result[bool]:
         """Delete an index.
 
         :param index_id: Index ID.
@@ -1408,7 +1454,7 @@ class Collection(ApiGroup):
         :return: True if index was deleted successfully, False if index was
             not found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.IndexDeleteError: If delete fails.
+        :raise aioarango.exceptions.IndexDeleteError: If delete fails.
         """
         request = Request(
             method="delete", endpoint=f"/_api/index/{self.name}/{index_id}"
@@ -1421,14 +1467,14 @@ class Collection(ApiGroup):
                 raise IndexDeleteError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def load_indexes(self) -> Result[bool]:
+    async def load_indexes(self) -> Result[bool]:
         """Cache all indexes in the collection into memory.
 
         :return: True if index was loaded successfully.
         :rtype: bool
-        :raise arango.exceptions.IndexLoadError: If operation fails.
+        :raise aioarango.exceptions.IndexLoadError: If operation fails.
         """
         request = Request(
             method="put",
@@ -1440,9 +1486,9 @@ class Collection(ApiGroup):
                 raise IndexLoadError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def insert_many(
+    async def insert_many(
         self,
         documents: Sequence[Json],
         return_new: bool = False,
@@ -1469,7 +1515,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single insert
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param documents: List of new documents to insert. If they contain the
@@ -1508,7 +1554,7 @@ class Collection(ApiGroup):
         :return: List of document metadata (e.g. document keys, revisions) and
             any exception, or True if parameter **silent** was set to True.
         :rtype: [dict | ArangoServerError] | bool
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
         documents = [self._ensure_key_from_id(doc) for doc in documents]
 
@@ -1555,9 +1601,9 @@ class Collection(ApiGroup):
 
             return results
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_many(
+    async def update_many(
         self,
         documents: Sequence[Json],
         check_rev: bool = True,
@@ -1583,7 +1629,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single update
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param documents: Partial or full documents with the updated values.
@@ -1612,7 +1658,7 @@ class Collection(ApiGroup):
         :return: List of document metadata (e.g. document keys, revisions) and
             any exceptions, or True if parameter **silent** was set to True.
         :rtype: [dict | ArangoError] | bool
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
         """
         params: Params = {
             "keepNull": keep_none,
@@ -1662,9 +1708,9 @@ class Collection(ApiGroup):
 
             return results
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_match(
+    async def update_match(
         self,
         filters: Json,
         body: Json,
@@ -1680,7 +1726,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single update
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param filters: Document filters.
@@ -1701,7 +1747,7 @@ class Collection(ApiGroup):
         :type merge: bool | None
         :return: Number of documents updated.
         :rtype: int
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
         """
         data: Json = {
             "collection": self.name,
@@ -1728,9 +1774,9 @@ class Collection(ApiGroup):
                 return result
             raise DocumentUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_many(
+    async def replace_many(
         self,
         documents: Sequence[Json],
         check_rev: bool = True,
@@ -1754,7 +1800,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single replace
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param documents: New documents to replace the old ones with. They must
@@ -1778,7 +1824,7 @@ class Collection(ApiGroup):
         :return: List of document metadata (e.g. document keys, revisions) and
             any exceptions, or True if parameter **silent** was set to True.
         :rtype: [dict | ArangoServerError] | bool
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
         """
         params: Params = {
             "returnNew": return_new,
@@ -1826,9 +1872,9 @@ class Collection(ApiGroup):
 
             return results
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_match(
+    async def replace_match(
         self,
         filters: Json,
         body: Json,
@@ -1842,7 +1888,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single replace
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param filters: Document filters.
@@ -1856,7 +1902,7 @@ class Collection(ApiGroup):
         :type sync: bool | None
         :return: Number of documents replaced.
         :rtype: int
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
         """
         data: Json = {"collection": self.name, "example": filters, "newValue": body}
         if limit is not None:
@@ -1877,9 +1923,9 @@ class Collection(ApiGroup):
             result: int = resp.body["replaced"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_many(
+    async def delete_many(
         self,
         documents: Sequence[Json],
         return_old: bool = False,
@@ -1902,7 +1948,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single delete
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param documents: Document IDs, keys or bodies. Document bodies must
@@ -1921,7 +1967,7 @@ class Collection(ApiGroup):
         :return: List of document metadata (e.g. document keys, revisions) and
             any exceptions, or True if parameter **silent** was set to True.
         :rtype: [dict | ArangoServerError] | bool
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
         """
         params: Params = {
             "returnOld": return_old,
@@ -1969,9 +2015,9 @@ class Collection(ApiGroup):
 
             return results
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_match(
+    async def delete_match(
         self, filters: Json, limit: Optional[int] = None, sync: Optional[bool] = None
     ) -> Result[int]:
         """Delete matching documents.
@@ -1981,7 +2027,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single delete
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param filters: Document filters.
@@ -1993,7 +2039,7 @@ class Collection(ApiGroup):
         :type sync: bool | None
         :return: Number of documents deleted.
         :rtype: int
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
         """
         data: Json = {"collection": self.name, "example": filters}
         if sync is not None:
@@ -2014,9 +2060,9 @@ class Collection(ApiGroup):
                 return result
             raise DocumentDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def import_bulk(
+    async def import_bulk(
         self,
         documents: Sequence[Json],
         halt_on_error: bool = True,
@@ -2032,7 +2078,7 @@ class Collection(ApiGroup):
 
         .. note::
 
-            This method is faster than :func:`arango.collection.Collection.insert_many`
+            This method is faster than :func:`aioarango.collection.Collection.insert_many`
             but does not return as many details.
 
         .. note::
@@ -2040,7 +2086,7 @@ class Collection(ApiGroup):
             In edge/vertex collections, this method does NOT provide the
             transactional guarantees and validations that single insert
             operation does for graphs. If these properties are required, see
-            :func:`arango.database.StandardDatabase.begin_batch_execution`
+            :func:`aioarango.database.StandardDatabase.begin_batch_execution`
             for an alternative approach.
 
         :param documents: List of new documents to insert. If they contain the
@@ -2089,7 +2135,7 @@ class Collection(ApiGroup):
         :type batch_size: int
         :return: Result of the bulk import.
         :rtype: dict | list[dict]
-        :raise arango.exceptions.DocumentInsertError: If import fails.
+        :raise aioarango.exceptions.DocumentInsertError: If import fails.
         """
         if overwrite and batch_size is not None:
             msg = "Cannot use parameter 'batch_size' if 'overwrite' is set to True"
@@ -2128,7 +2174,7 @@ class Collection(ApiGroup):
                 write=self.name,
             )
 
-            return self._execute(request, response_handler)
+            return await self._execute(request, response_handler)
         else:
             results = []
             for batch in get_batches(documents, batch_size):
@@ -2139,7 +2185,7 @@ class Collection(ApiGroup):
                     params=params,
                     write=self.name,
                 )
-                results.append(self._execute(request, response_handler))
+                results.append( await self._execute(request, response_handler))
 
             return results
 
@@ -2150,10 +2196,10 @@ class StandardCollection(Collection):
     def __repr__(self) -> str:
         return f"<StandardCollection {self.name}>"
 
-    def __getitem__(self, key: Union[str, Json]) -> Result[Optional[Json]]:
-        return self.get(key)
+    # def __getitem__(self, key: Union[str, Json]) -> Result[Optional[Json]]:
+    #     return self.get(key)
 
-    def get(
+    async def get(
         self,
         document: Union[str, Json],
         rev: Optional[str] = None,
@@ -2175,8 +2221,8 @@ class StandardCollection(Collection):
         :type allow_dirty_read: bool | None
         :return: Document, or None if not found.
         :rtype: dict | None
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, body, headers = self._prep_from_doc(document, rev, check_rev)
 
@@ -2201,9 +2247,9 @@ class StandardCollection(Collection):
             result: Json = resp.body
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def insert(
+    async def insert(
         self,
         document: Json,
         return_new: bool = False,
@@ -2251,7 +2297,7 @@ class StandardCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
         document = self._ensure_key_from_id(document)
 
@@ -2290,9 +2336,9 @@ class StandardCollection(Collection):
                 result["_old_rev"] = result.pop("_oldRev")
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update(
+    async def update(
         self,
         document: Json,
         check_rev: bool = True,
@@ -2331,8 +2377,8 @@ class StandardCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         params: Params = {
             "keepNull": keep_none,
@@ -2366,9 +2412,9 @@ class StandardCollection(Collection):
             result["_old_rev"] = result.pop("_oldRev")
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace(
+    async def replace(
         self,
         document: Json,
         check_rev: bool = True,
@@ -2400,8 +2446,8 @@ class StandardCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         params: Params = {
             "returnNew": return_new,
@@ -2435,9 +2481,9 @@ class StandardCollection(Collection):
                 result["_old_rev"] = result.pop("_oldRev")
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete(
+    async def delete(
         self,
         document: Union[str, Json],
         rev: Optional[str] = None,
@@ -2475,8 +2521,8 @@ class StandardCollection(Collection):
             found and **ignore_missing** was set to True (does not apply in
             transactions).
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, body, headers = self._prep_from_doc(document, rev, check_rev)
 
@@ -2497,7 +2543,7 @@ class StandardCollection(Collection):
             write=self.name,
         )
 
-        def response_handler(resp: Response) -> Union[bool, Json]:
+        def response_handler(resp):
             if resp.error_code == 1202 and ignore_missing:
                 return False
             if resp.status_code == 412:
@@ -2506,7 +2552,7 @@ class StandardCollection(Collection):
                 raise DocumentDeleteError(resp, request)
             return True if silent else resp.body
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
 
 class VertexCollection(Collection):
@@ -2527,9 +2573,6 @@ class VertexCollection(Collection):
     def __repr__(self) -> str:
         return f"<VertexCollection {self.name}>"
 
-    def __getitem__(self, key: Union[str, Json]) -> Result[Optional[Json]]:
-        return self.get(key)
-
     @property
     def graph(self) -> str:
         """Return the graph name.
@@ -2539,7 +2582,7 @@ class VertexCollection(Collection):
         """
         return self._graph
 
-    def get(
+    async def get(
         self,
         vertex: Union[str, Json],
         rev: Optional[str] = None,
@@ -2558,8 +2601,8 @@ class VertexCollection(Collection):
         :type check_rev: bool
         :return: Vertex document or None if not found.
         :rtype: dict | None
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, body, headers = self._prep_from_doc(vertex, rev, check_rev)
 
@@ -2580,9 +2623,9 @@ class VertexCollection(Collection):
             result: Json = resp.body["vertex"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def insert(
+    async def insert(
         self,
         vertex: Json,
         sync: Optional[bool] = None,
@@ -2606,7 +2649,7 @@ class VertexCollection(Collection):
         :return: Document metadata (e.g. document key, revision), or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
         vertex = self._ensure_key_from_id(vertex)
 
@@ -2629,9 +2672,9 @@ class VertexCollection(Collection):
                 return True
             return format_vertex(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update(
+    async def update(
         self,
         vertex: Json,
         check_rev: bool = True,
@@ -2666,8 +2709,8 @@ class VertexCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         vertex_id, headers = self._prep_from_body(vertex, check_rev)
 
@@ -2699,9 +2742,9 @@ class VertexCollection(Collection):
                 return True
             return format_vertex(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace(
+    async def replace(
         self,
         vertex: Json,
         check_rev: bool = True,
@@ -2732,8 +2775,8 @@ class VertexCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         vertex_id, headers = self._prep_from_body(vertex, check_rev)
 
@@ -2763,9 +2806,9 @@ class VertexCollection(Collection):
                 return True
             return format_vertex(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete(
+    async def delete(
         self,
         vertex: Union[str, Json],
         rev: Optional[str] = None,
@@ -2798,8 +2841,8 @@ class VertexCollection(Collection):
             transactions). Old document is returned if **return_old** is set to
             True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, _, headers = self._prep_from_doc(vertex, rev, check_rev)
 
@@ -2826,7 +2869,7 @@ class VertexCollection(Collection):
             result: Json = resp.body
             return {"old": result["old"]} if return_old else True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
 
 class EdgeCollection(Collection):
@@ -2847,9 +2890,6 @@ class EdgeCollection(Collection):
     def __repr__(self) -> str:
         return f"<EdgeCollection {self.name}>"
 
-    def __getitem__(self, key: Union[str, Json]) -> Result[Optional[Json]]:
-        return self.get(key)
-
     @property
     def graph(self) -> str:
         """Return the graph name.
@@ -2859,7 +2899,7 @@ class EdgeCollection(Collection):
         """
         return self._graph
 
-    def get(
+    async def get(
         self, edge: Union[str, Json], rev: Optional[str] = None, check_rev: bool = True
     ) -> Result[Optional[Json]]:
         """Return an edge document.
@@ -2875,8 +2915,8 @@ class EdgeCollection(Collection):
         :type check_rev: bool
         :return: Edge document or None if not found.
         :rtype: dict | None
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, body, headers = self._prep_from_doc(edge, rev, check_rev)
 
@@ -2898,9 +2938,9 @@ class EdgeCollection(Collection):
             result: Json = resp.body["edge"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def insert(
+    async def insert(
         self,
         edge: Json,
         sync: Optional[bool] = None,
@@ -2925,7 +2965,7 @@ class EdgeCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
         edge = self._ensure_key_from_id(edge)
 
@@ -2948,9 +2988,9 @@ class EdgeCollection(Collection):
                 return True
             return format_edge(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update(
+    async def update(
         self,
         edge: Json,
         check_rev: bool = True,
@@ -2985,8 +3025,8 @@ class EdgeCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         edge_id, headers = self._prep_from_body(edge, check_rev)
 
@@ -3018,9 +3058,9 @@ class EdgeCollection(Collection):
                 return True
             return format_edge(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace(
+    async def replace(
         self,
         edge: Json,
         check_rev: bool = True,
@@ -3052,8 +3092,8 @@ class EdgeCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         edge_id, headers = self._prep_from_body(edge, check_rev)
 
@@ -3083,9 +3123,9 @@ class EdgeCollection(Collection):
                 return True
             return format_edge(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete(
+    async def delete(
         self,
         edge: Union[str, Json],
         rev: Optional[str] = None,
@@ -3117,8 +3157,8 @@ class EdgeCollection(Collection):
             found and **ignore_missing** was set to True (does not  apply in
             transactions).
         :rtype: bool
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
         handle, _, headers = self._prep_from_doc(edge, rev, check_rev)
 
@@ -3145,9 +3185,9 @@ class EdgeCollection(Collection):
             result: Json = resp.body
             return {"old": result["old"]} if return_old else True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def link(
+    async def link(
         self,
         from_vertex: Union[str, Json],
         to_vertex: Union[str, Json],
@@ -3177,18 +3217,15 @@ class EdgeCollection(Collection):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
         edge = {"_from": get_doc_id(from_vertex), "_to": get_doc_id(to_vertex)}
         if data is not None:
             edge.update(self._ensure_key_from_id(data))
-        return self.insert(edge, sync=sync, silent=silent, return_new=return_new)
+        return await self.insert(edge, sync=sync, silent=silent, return_new=return_new)
 
-    def edges(
-        self,
-        vertex: Union[str, Json],
-        direction: Optional[str] = None,
-        allow_dirty_read: bool = False,
+    async def edges(
+        self, vertex: Union[str, Json], direction: Optional[str] = None,allow_dirty_read: bool = False,
     ) -> Result[Json]:
         """Return the edge documents coming in and/or out of the vertex.
 
@@ -3201,7 +3238,7 @@ class EdgeCollection(Collection):
         :type allow_dirty_read: bool | None
         :return: List of edges and statistics.
         :rtype: dict
-        :raise arango.exceptions.EdgeListError: If retrieval fails.
+        :raise aioarango.exceptions.EdgeListError: If retrieval fails.
         """
         params: Params = {"vertex": get_doc_id(vertex)}
         if direction is not None:
@@ -3227,4 +3264,4 @@ class EdgeCollection(Collection):
                 },
             }
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

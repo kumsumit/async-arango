@@ -1,9 +1,7 @@
-__all__ = ["Replication"]
-
 from typing import Optional, Sequence
 
-from arango.api import ApiGroup
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.exceptions import (
     ReplicationApplierConfigError,
     ReplicationApplierConfigSetError,
     ReplicationApplierStartError,
@@ -21,7 +19,7 @@ from arango.exceptions import (
     ReplicationServerIDError,
     ReplicationSyncError,
 )
-from arango.formatter import (
+from aioarango.formatter import (
     format_replication_applier_config,
     format_replication_applier_state,
     format_replication_header,
@@ -29,14 +27,14 @@ from arango.formatter import (
     format_replication_logger_state,
     format_replication_sync,
 )
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json, Params
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json, Params
 
 
 class Replication(ApiGroup):
-    def inventory(
+    async def inventory(
         self,
         batch_id: str,
         include_system: Optional[bool] = None,
@@ -54,7 +52,7 @@ class Replication(ApiGroup):
         :type all_databases: bool | None
         :return: Overview of collections and indexes.
         :rtype: dict
-        :raise arango.exceptions.ReplicationInventoryError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationInventoryError: If retrieval fails.
         """
         params: Params = {"batchId": batch_id}
         if include_system is not None:
@@ -71,16 +69,16 @@ class Replication(ApiGroup):
                 return format_replication_inventory(resp.body)
             raise ReplicationInventoryError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_dump_batch(self, ttl: Optional[int] = None) -> Result[Json]:
+    async def create_dump_batch(self, ttl: Optional[int] = None) -> Result[Json]:
         """Create a new dump batch.
 
         :param ttl: Time-to-live for the new batch in seconds.
         :type ttl: int | None
         :return: ID of the batch.
         :rtype: dict
-        :raise arango.exceptions.ReplicationDumpBatchCreateError: If create fails.
+        :raise aioarango.exceptions.ReplicationDumpBatchCreateError: If create fails.
         """
         request = Request(
             method="post", endpoint="/_api/replication/batch", data={"ttl": ttl}
@@ -91,16 +89,16 @@ class Replication(ApiGroup):
                 return {"id": resp.body["id"], "last_tick": resp.body["lastTick"]}
             raise ReplicationDumpBatchCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_dump_batch(self, batch_id: str) -> Result[bool]:
+    async def delete_dump_batch(self, batch_id: str) -> Result[bool]:
         """Delete a dump batch.
 
         :param batch_id: Dump batch ID.
         :type batch_id: str
         :return: True if deletion was successful.
         :rtype: bool
-        :raise arango.exceptions.ReplicationDumpBatchDeleteError: If delete fails.
+        :raise aioarango.exceptions.ReplicationDumpBatchDeleteError: If delete fails.
         """
         request = Request(
             method="delete",
@@ -113,9 +111,9 @@ class Replication(ApiGroup):
                 return True
             raise ReplicationDumpBatchDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def extend_dump_batch(self, batch_id: str, ttl: int) -> Result[bool]:
+    async def extend_dump_batch(self, batch_id: str, ttl: int) -> Result[bool]:
         """Extend a dump batch.
 
         :param batch_id: Dump batch ID.
@@ -124,7 +122,7 @@ class Replication(ApiGroup):
         :type ttl: int
         :return: True if operation was successful.
         :rtype: bool
-        :raise arango.exceptions.ReplicationDumpBatchExtendError: If dump fails.
+        :raise aioarango.exceptions.ReplicationDumpBatchExtendError: If dump fails.
         """
         request = Request(
             method="put",
@@ -138,9 +136,9 @@ class Replication(ApiGroup):
                 return True
             raise ReplicationDumpBatchExtendError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def dump(
+    async def dump(
         self,
         collection: str,
         batch_id: Optional[str] = None,
@@ -160,7 +158,7 @@ class Replication(ApiGroup):
         :type deserialize: bool
         :return: Collection events data.
         :rtype: str | [dict]
-        :raise arango.exceptions.ReplicationDumpError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationDumpError: If retrieval fails.
         """
         params: Params = {"collection": collection}
 
@@ -192,9 +190,9 @@ class Replication(ApiGroup):
 
             raise ReplicationDumpError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def synchronize(
+    async def synchronize(
         self,
         endpoint: str,
         database: Optional[str] = None,
@@ -242,7 +240,7 @@ class Replication(ApiGroup):
         :type initial_sync_wait_time: int | None
         :return: Collections transferred and last log tick.
         :rtype: dict
-        :raise arango.exceptions.ReplicationSyncError: If sync fails.
+        :raise aioarango.exceptions.ReplicationSyncError: If sync fails.
         """
         data: Json = {"endpoint": endpoint}
 
@@ -270,9 +268,9 @@ class Replication(ApiGroup):
                 return format_replication_sync(resp.body)
             raise ReplicationSyncError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def cluster_inventory(self, include_system: Optional[bool] = None) -> Result[Json]:
+    async def cluster_inventory(self, include_system: Optional[bool] = None) -> Result[Json]:
         """Return an overview of collections and indexes in a cluster.
 
         :param include_system: Include system collections in the result.
@@ -280,7 +278,7 @@ class Replication(ApiGroup):
         :type include_system: bool
         :return: Overview of collections and indexes on the cluster.
         :rtype: dict
-        :raise arango.exceptions.ReplicationClusterInventoryError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationClusterInventoryError: If retrieval fails.
         """
         params: Params = {}
         if include_system is not None:
@@ -295,14 +293,14 @@ class Replication(ApiGroup):
                 return format_replication_inventory(resp.body)
             raise ReplicationClusterInventoryError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def logger_state(self) -> Result[Json]:
+    async def logger_state(self) -> Result[Json]:
         """Return the state of the replication logger.
 
         :return: Logger state.
         :rtype: dict
-        :raise arango.exceptions.ReplicationLoggerStateError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationLoggerStateError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -314,14 +312,14 @@ class Replication(ApiGroup):
                 return format_replication_logger_state(resp.body)
             raise ReplicationLoggerStateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def logger_first_tick(self) -> Result[str]:
+    async def logger_first_tick(self) -> Result[str]:
         """Return the first available tick value from the server.
 
         :return: First tick value.
         :rtype: str
-        :raise arango.exceptions.ReplicationLoggerFirstTickError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationLoggerFirstTickError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -333,14 +331,14 @@ class Replication(ApiGroup):
                 return str(resp.body["firstTick"])
             raise ReplicationLoggerFirstTickError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def applier_config(self) -> Result[Json]:
+    async def applier_config(self) -> Result[Json]:
         """Return the configuration of the replication applier.
 
         :return: Configuration of the replication applier.
         :rtype: dict
-        :raise arango.exceptions.ReplicationApplierConfigError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationApplierConfigError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -352,9 +350,9 @@ class Replication(ApiGroup):
                 return format_replication_applier_config(resp.body)
             raise ReplicationApplierConfigError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def set_applier_config(
+    async def set_applier_config(
         self,
         endpoint: str,
         database: Optional[str] = None,
@@ -469,7 +467,7 @@ class Replication(ApiGroup):
         :type restrict_collections: [str] | None
         :return: Updated configuration.
         :rtype: dict
-        :raise arango.exceptions.ReplicationApplierConfigSetError: If update fails.
+        :raise aioarango.exceptions.ReplicationApplierConfigSetError: If update fails.
         """
         data: Json = {"endpoint": endpoint}
 
@@ -523,14 +521,14 @@ class Replication(ApiGroup):
                 return format_replication_applier_config(resp.body)
             raise ReplicationApplierConfigSetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def applier_state(self) -> Result[Json]:
+    async def applier_state(self) -> Result[Json]:
         """Return the state of the replication applier
 
         :return: Applier state and details.
         :rtype: dict
-        :raise arango.exceptions.ReplicationApplierStateError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationApplierStateError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -542,9 +540,9 @@ class Replication(ApiGroup):
                 return format_replication_applier_state(resp.body)
             raise ReplicationApplierStateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def start_applier(self, last_tick: Optional[str] = None) -> Result[Json]:
+    async def start_applier(self, last_tick: Optional[str] = None) -> Result[Json]:
         """Start the replication applier.
 
         :param last_tick: The remote last log tick value from which to start
@@ -555,7 +553,7 @@ class Replication(ApiGroup):
         :type last_tick: str
         :return: Applier state and details.
         :rtype: dict
-        :raise arango.exceptions.ReplicationApplierStartError: If operation fails.
+        :raise aioarango.exceptions.ReplicationApplierStartError: If operation fails.
         """
         request = Request(
             method="put",
@@ -568,14 +566,14 @@ class Replication(ApiGroup):
                 return format_replication_applier_state(resp.body)
             raise ReplicationApplierStartError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def stop_applier(self) -> Result[Json]:
+    async def stop_applier(self) -> Result[Json]:
         """Stop the replication applier.
 
         :return: Applier state and details.
         :rtype: dict
-        :raise arango.exceptions.ReplicationApplierStopError: If operation fails.
+        :raise aioarango.exceptions.ReplicationApplierStopError: If operation fails.
         """
         request = Request(
             method="put",
@@ -587,9 +585,9 @@ class Replication(ApiGroup):
                 return format_replication_applier_state(resp.body)
             raise ReplicationApplierStopError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def make_slave(
+    async def make_slave(
         self,
         endpoint: str,
         database: Optional[str] = None,
@@ -700,7 +698,7 @@ class Replication(ApiGroup):
         :type verbose: bool | None
         :return: Replication details.
         :rtype: dict
-        :raise arango.exceptions.ReplicationApplierStopError: If operation fails.
+        :raise aioarango.exceptions.ReplicationApplierStopError: If operation fails.
         """
         data: Json = {"endpoint": endpoint}
 
@@ -752,14 +750,14 @@ class Replication(ApiGroup):
                 return format_replication_applier_state(resp.body)
             raise ReplicationMakeSlaveError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def server_id(self) -> Result[str]:
+    async def server_id(self) -> Result[str]:
         """Return this server's ID.
 
         :return: Server ID.
         :rtype: str
-        :raise arango.exceptions.ReplicationServerIDError: If retrieval fails.
+        :raise aioarango.exceptions.ReplicationServerIDError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -771,4 +769,4 @@ class Replication(ApiGroup):
                 return str(resp.body["serverId"])
             raise ReplicationServerIDError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

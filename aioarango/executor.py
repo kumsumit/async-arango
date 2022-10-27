@@ -1,18 +1,10 @@
-__all__ = [
-    "ApiExecutor",
-    "DefaultApiExecutor",
-    "AsyncApiExecutor",
-    "BatchApiExecutor",
-    "TransactionApiExecutor",
-]
-
 from collections import OrderedDict
 from typing import Any, Callable, Optional, Sequence, Tuple, TypeVar, Union
 from urllib.parse import urlencode
 from uuid import uuid4
 
-from arango.connection import Connection
-from arango.exceptions import (
+from aioarango.connection import Connection
+from aioarango.exceptions import (
     AsyncExecuteError,
     BatchExecuteError,
     BatchStateError,
@@ -21,11 +13,11 @@ from arango.exceptions import (
     TransactionInitError,
     TransactionStatusError,
 )
-from arango.job import AsyncJob, BatchJob
-from arango.request import Request
-from arango.response import Response
-from arango.typings import Fields, Json
-from arango.utils import suppress_warning
+from aioarango.job import AsyncJob, BatchJob
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.typings import Fields, Json
+from aioarango.utils import suppress_warning
 
 ApiExecutor = Union[
     "DefaultApiExecutor",
@@ -41,8 +33,8 @@ class DefaultApiExecutor:
     """Default API executor.
 
     :param connection: HTTP connection.
-    :type connection: arango.connection.BasicConnection |
-        arango.connection.JwtConnection | arango.connection.JwtSuperuserConnection
+    :type connection: aioarango.connection.BasicConnection |
+        aioarango.connection.JwtConnection | aioarango.connection.JwtSuperuserConnection
     """
 
     def __init__(self, connection: Connection) -> None:
@@ -52,16 +44,16 @@ class DefaultApiExecutor:
     def context(self) -> str:
         return "default"
 
-    def execute(self, request: Request, response_handler: Callable[[Response], T]) -> T:
+    async def execute(self, request: Request, response_handler: Callable[[Response], T]) -> T:
         """Execute an API request and return the result.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :param response_handler: HTTP response handler.
         :type response_handler: callable
         :return: API execution result.
         """
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
         return response_handler(resp)
 
 
@@ -69,10 +61,10 @@ class AsyncApiExecutor:
     """Async API Executor.
 
     :param connection: HTTP connection.
-    :type connection: arango.connection.BasicConnection |
-        arango.connection.JwtConnection | arango.connection.JwtSuperuserConnection
+    :type connection: aioarango.connection.BasicConnection |
+        aioarango.connection.JwtConnection | aioarango.connection.JwtSuperuserConnection
     :param return_result: If set to True, API executions return instances of
-        :class:`arango.job.AsyncJob` and results can be retrieved from server
+        :class:`aioarango.job.AsyncJob` and results can be retrieved from server
         once available. If set to False, API executions return None and no
         results are stored on server.
     :type return_result: bool
@@ -86,25 +78,25 @@ class AsyncApiExecutor:
     def context(self) -> str:
         return "async"
 
-    def execute(
+    async def execute(
         self, request: Request, response_handler: Callable[[Response], T]
     ) -> Optional[AsyncJob[T]]:
         """Execute an API request asynchronously.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :param response_handler: HTTP response handler.
         :type response_handler: callable
         :return: Async job or None if **return_result** parameter was set to
             False during initialization.
-        :rtype: arango.job.AsyncJob | None
+        :rtype: aioarango.job.AsyncJob | None
         """
         if self._return_result:
             request.headers["x-arango-async"] = "store"
         else:
             request.headers["x-arango-async"] = "true"
 
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
         if not resp.is_success:
             raise AsyncExecuteError(resp, request)
         if not self._return_result:
@@ -119,7 +111,7 @@ class BatchApiExecutor:
 
     :param connection: HTTP connection.
     :param return_result: If set to True, API executions return instances of
-        :class:`arango.job.BatchJob` that are populated with results on commit.
+        :class:`aioarango.job.BatchJob` that are populated with results on commit.
         If set to False, API executions return None and no results are tracked
         client-side.
     :type return_result: bool
@@ -158,25 +150,25 @@ class BatchApiExecutor:
 
         :return: Batch jobs or None if **return_result** parameter was set to
             False during initialization.
-        :rtype: [arango.job.BatchJob] | None
+        :rtype: [aioarango.job.BatchJob] | None
         """
         if not self._return_result:
             return None
         return [job for _, job in self._queue.values()]
 
-    def execute(
+    async def execute(
         self, request: Request, response_handler: Callable[[Response], T]
     ) -> Optional[BatchJob[T]]:
         """Place the request in the batch queue.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :param response_handler: HTTP response handler.
         :type response_handler: callable
         :return: Batch job or None if **return_result** parameter was set to
             False during initialization.
-        :rtype: arango.job.BatchJob | None
-        :raise arango.exceptions.BatchStateError: If batch was already
+        :rtype: aioarango.job.BatchJob | None
+        :raise aioarango.exceptions.BatchStateError: If batch was already
             committed.
         """
         if self._committed:
@@ -186,19 +178,19 @@ class BatchApiExecutor:
         self._queue[job.id] = (request, job)
         return job if self._return_result else None
 
-    def commit(self) -> Optional[Sequence[BatchJob[Any]]]:
+    async def commit(self) -> Optional[Sequence[BatchJob[Any]]]:
         """Execute the queued requests in a single batch API request.
 
         If **return_result** parameter was set to True during initialization,
-        :class:`arango.job.BatchJob` instances are populated with results.
+        :class:`aioarango.job.BatchJob` instances are populated with results.
 
         :return: Batch jobs or None if **return_result** parameter was set to
             False during initialization.
-        :rtype: [arango.job.BatchJob] | None
-        :raise arango.exceptions.BatchStateError: If batch state is invalid
+        :rtype: [aioarango.job.BatchJob] | None
+        :raise aioarango.exceptions.BatchStateError: If batch state is invalid
             (e.g. batch was already committed or size of response from server
             did not match the expected).
-        :raise arango.exceptions.BatchExecuteError: If commit fails.
+        :raise aioarango.exceptions.BatchExecuteError: If commit fails.
         """
         if self._committed:
             raise BatchStateError("batch already committed")
@@ -227,7 +219,7 @@ class BatchApiExecutor:
             data="\r\n".join(buffer),
         )
         with suppress_warning("requests.packages.urllib3.connectionpool"):
-            resp = self._conn.send_request(request)
+            resp = await self._conn.send_request(request)
 
         if not resp.is_success:
             raise BatchExecuteError(resp, request)
@@ -297,9 +289,12 @@ class TransactionApiExecutor:
     :type allow_dirty_read: bool | None
     """
 
-    def __init__(
+    def __init__(self, connection: Connection):
+        self._conn = connection
+        self._id = None
+
+    async def begin(
         self,
-        connection: Connection,
         read: Optional[Fields] = None,
         write: Optional[Fields] = None,
         exclusive: Optional[Fields] = None,
@@ -309,8 +304,28 @@ class TransactionApiExecutor:
         max_size: Optional[int] = None,
         allow_dirty_read: bool = False,
     ) -> None:
-        self._conn = connection
+        """Begin transaction.
 
+        :param read: Name(s) of collections read during transaction. Read-only
+            collections are added lazily but should be declared if possible to
+            avoid deadlocks.
+        :type read: str | [str]
+        :param write: Name(s) of collections written to during transaction with
+            shared access.
+        :type write: str | [str]
+        :param exclusive: Name(s) of collections written to during transaction
+            with exclusive access.
+        :type exclusive: str | [str]
+        :param sync: Block until operation is synchronized to disk.
+        :type sync: bool | None
+        :param allow_implicit: Allow reading from undeclared collections.
+        :type allow_implicit: bool
+        :param lock_timeout: Timeout for waiting on collection locks. If not given,
+            a default value is used. Setting it to 0 disables the timeout.
+        :type lock_timeout: int
+        :param max_size: Max transaction size in bytes.
+        :type max_size: int
+        """
         collections: Json = {}
         if read is not None:
             collections["read"] = read
@@ -335,7 +350,7 @@ class TransactionApiExecutor:
             data=data,
             headers={"x-arango-allow-dirty-read": "true"} if allow_dirty_read else None,
         )
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
 
         if not resp.is_success:
             raise TransactionInitError(resp, request)
@@ -356,16 +371,11 @@ class TransactionApiExecutor:
         """
         return self._id
 
-    def execute(
-        self,
-        request: Request,
-        response_handler: Callable[[Response], T],
-        allow_dirty_read: bool = False,
-    ) -> T:
+    async def execute(self, request: Request, response_handler: Callable[[Response], T], allow_dirty_read: bool = False,) -> T:
         """Execute API request in a transaction and return the result.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :param response_handler: HTTP response handler.
         :type response_handler: callable
         :param allow_dirty_read: Allow reads from followers in a cluster.
@@ -375,55 +385,55 @@ class TransactionApiExecutor:
         request.headers["x-arango-trx-id"] = self._id
         if allow_dirty_read:
             request.headers["x-arango-allow-dirty-read"] = "true"
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
         return response_handler(resp)
 
-    def status(self) -> str:
+    async def status(self) -> str:
         """Return the transaction status.
 
         :return: Transaction status.
         :rtype: str
-        :raise arango.exceptions.TransactionStatusError: If retrieval fails.
+        :raise aioarango.exceptions.TransactionStatusError: If retrieval fails.
         """
         request = Request(
             method="get",
             endpoint=f"/_api/transaction/{self._id}",
         )
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
 
         if resp.is_success:
             return str(resp.body["result"]["status"])
         raise TransactionStatusError(resp, request)
 
-    def commit(self) -> bool:
+    async def commit(self) -> bool:
         """Commit the transaction.
 
         :return: True if commit was successful.
         :rtype: bool
-        :raise arango.exceptions.TransactionCommitError: If commit fails.
+        :raise aioarango.exceptions.TransactionCommitError: If commit fails.
         """
         request = Request(
             method="put",
             endpoint=f"/_api/transaction/{self._id}",
         )
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
 
         if resp.is_success:
             return True
         raise TransactionCommitError(resp, request)
 
-    def abort(self) -> bool:
+    async def abort(self) -> bool:
         """Abort the transaction.
 
         :return: True if the abort operation was successful.
         :rtype: bool
-        :raise arango.exceptions.TransactionAbortError: If abort fails.
+        :raise aioarango.exceptions.TransactionAbortError: If abort fails.
         """
         request = Request(
             method="delete",
             endpoint=f"/_api/transaction/{self._id}",
         )
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
 
         if resp.is_success:
             return True

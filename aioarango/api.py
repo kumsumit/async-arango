@@ -1,12 +1,10 @@
-__all__ = ["ApiGroup"]
-
 from typing import Callable, Optional, TypeVar
 
-from arango.connection import Connection
-from arango.executor import ApiExecutor
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
+from aioarango.connection import Connection
+from aioarango.executor import ApiExecutor
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
 
 T = TypeVar("T")
 
@@ -27,8 +25,8 @@ class ApiGroup:
         """Return the HTTP connection.
 
         :return: HTTP connection.
-        :rtype: arango.connection.BasicConnection | arango.connection.JwtConnection |
-            arango.connection.JwtSuperuserConnection
+        :rtype: aioarango.connection.BasicConnection | aioarango.connection.JwtConnection |
+            aioarango.connection.JwtSuperuserConnection
         """
         return self._conn
 
@@ -60,15 +58,15 @@ class ApiGroup:
         """
         return self._executor.context
 
-    def _execute(
+    async def _execute(
         self, request: Request, response_handler: Callable[[Response], T]
     ) -> Result[T]:
         """Execute an API.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :param response_handler: HTTP response handler.
         :type response_handler: callable
         :return: API execution result.
         """
-        return self._executor.execute(request, response_handler)
+        return await self._executor.execute(request, response_handler)

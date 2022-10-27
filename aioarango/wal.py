@@ -1,9 +1,7 @@
-__all__ = ["WAL"]
-
 from typing import Optional
 
-from arango.api import ApiGroup
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.exceptions import (
     WALConfigureError,
     WALFlushError,
     WALLastTickError,
@@ -12,27 +10,27 @@ from arango.exceptions import (
     WALTickRangesError,
     WALTransactionListError,
 )
-from arango.formatter import (
+from aioarango.formatter import (
     format_replication_header,
     format_tick_values,
     format_wal_properties,
     format_wal_transactions,
 )
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json, Params
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json, Params
 
 
 class WAL(ApiGroup):  # pragma: no cover
     """WAL (Write-Ahead Log) API wrapper."""
 
-    def properties(self) -> Result[Json]:
+    async def properties(self) -> Result[Json]:
         """Return WAL properties.
 
         :return: WAL properties.
         :rtype: dict
-        :raise arango.exceptions.WALPropertiesError: If retrieval fails.
+        :raise aioarango.exceptions.WALPropertiesError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_admin/wal/properties")
 
@@ -41,9 +39,9 @@ class WAL(ApiGroup):  # pragma: no cover
                 return format_wal_properties(resp.body)
             raise WALPropertiesError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def configure(
+    async def configure(
         self,
         oversized_ops: Optional[bool] = None,
         log_size: Optional[int] = None,
@@ -72,7 +70,7 @@ class WAL(ApiGroup):  # pragma: no cover
         :type throttle_limit: int
         :return: New WAL properties.
         :rtype: dict
-        :raise arango.exceptions.WALConfigureError: If operation fails.
+        :raise aioarango.exceptions.WALConfigureError: If operation fails.
         """
         data: Json = {}
         if oversized_ops is not None:
@@ -95,9 +93,9 @@ class WAL(ApiGroup):  # pragma: no cover
                 return format_wal_properties(resp.body)
             raise WALConfigureError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def transactions(self) -> Result[Json]:
+    async def transactions(self) -> Result[Json]:
         """Return details on currently running WAL transactions.
 
         Fields in the returned details are as follows:
@@ -116,7 +114,7 @@ class WAL(ApiGroup):  # pragma: no cover
 
         :return: Details on currently running WAL transactions.
         :rtype: dict
-        :raise arango.exceptions.WALTransactionListError: If retrieval fails.
+        :raise aioarango.exceptions.WALTransactionListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_admin/wal/transactions")
 
@@ -125,9 +123,9 @@ class WAL(ApiGroup):  # pragma: no cover
                 return format_wal_transactions(resp.body)
             raise WALTransactionListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def flush(self, sync: bool = True, garbage_collect: bool = True) -> Result[bool]:
+    async def flush(self, sync: bool = True, garbage_collect: bool = True) -> Result[bool]:
         """Synchronize WAL to disk.
 
         :param sync: Block until the synchronization is complete.
@@ -136,7 +134,7 @@ class WAL(ApiGroup):  # pragma: no cover
         :type garbage_collect: bool
         :return: True if WAL was flushed successfully.
         :rtype: bool
-        :raise arango.exceptions.WALFlushError: If flush operation fails.
+        :raise aioarango.exceptions.WALFlushError: If flush operation fails.
         """
         request = Request(
             method="put",
@@ -149,14 +147,14 @@ class WAL(ApiGroup):  # pragma: no cover
                 return True
             raise WALFlushError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def tick_ranges(self) -> Result[Json]:
+    async def tick_ranges(self) -> Result[Json]:
         """Return the available ranges of tick values for all WAL files.
 
         :return: Ranges of tick values.
         :rtype: dict
-        :raise arango.exceptions.WALTickRangesError: If retrieval fails.
+        :raise aioarango.exceptions.WALTickRangesError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/wal/range")
 
@@ -165,14 +163,14 @@ class WAL(ApiGroup):  # pragma: no cover
                 return format_tick_values(resp.body)
             raise WALTickRangesError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def last_tick(self) -> Result[Json]:
+    async def last_tick(self) -> Result[Json]:
         """Return the last available tick value (last successful operation).
 
         :return: Last tick value in the WAL.
         :rtype: dict
-        :raise arango.exceptions.WALLastTickError: If retrieval fails.
+        :raise aioarango.exceptions.WALLastTickError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/wal/lastTick")
 
@@ -181,9 +179,9 @@ class WAL(ApiGroup):  # pragma: no cover
                 return format_tick_values(resp.body)
             raise WALLastTickError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def tail(
+    async def tail(
         self,
         lower: Optional[str] = None,
         upper: Optional[str] = None,
@@ -239,7 +237,7 @@ class WAL(ApiGroup):  # pragma: no cover
             a string. If **deserialize** is set to True, it is deserialized and
             returned as a list of dictionaries.
         :rtype: dict
-        :raise arango.exceptions.WALTailError: If tail operation fails.
+        :raise aioarango.exceptions.WALTailError: If tail operation fails.
         """
         params: Params = {}
         if lower is not None:
@@ -281,4 +279,4 @@ class WAL(ApiGroup):  # pragma: no cover
 
             raise WALTailError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

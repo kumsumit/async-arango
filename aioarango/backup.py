@@ -1,10 +1,8 @@
-__all__ = ["Backup"]
-
 from numbers import Number
 from typing import Optional
 
-from arango.api import ApiGroup
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.exceptions import (
     BackupCreateError,
     BackupDeleteError,
     BackupDownloadError,
@@ -12,20 +10,20 @@ from arango.exceptions import (
     BackupRestoreError,
     BackupUploadError,
 )
-from arango.formatter import (
+from aioarango.formatter import (
     format_backup,
     format_backup_restore,
     format_backup_transfer,
     format_backups,
 )
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json
 
 
 class Backup(ApiGroup):  # pragma: no cover
-    def get(self, backup_id: Optional[str] = None) -> Result[Json]:
+    async def get(self, backup_id: Optional[str] = None) -> Result[Json]:
         """Return backup details.
 
         :param backup_id: If set, details on only the specified backup is
@@ -33,7 +31,7 @@ class Backup(ApiGroup):  # pragma: no cover
         :type backup_id: str
         :return: Backup details.
         :rtype: dict
-        :raise arango.exceptions.BackupGetError: If delete fails.
+        :raise aioarango.exceptions.BackupGetError: If delete fails.
         """
         request = Request(
             method="post",
@@ -46,9 +44,9 @@ class Backup(ApiGroup):  # pragma: no cover
                 return format_backups(resp.body["result"])
             raise BackupGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create(
+    async def create(
         self,
         label: Optional[str] = None,
         allow_inconsistent: Optional[bool] = None,
@@ -73,7 +71,7 @@ class Backup(ApiGroup):  # pragma: no cover
         :type timeout: int
         :return: Result of the create operation.
         :rtype: dict
-        :raise arango.exceptions.BackupCreateError: If create fails.
+        :raise aioarango.exceptions.BackupCreateError: If create fails.
         """
         data: Json = {"label": label}
 
@@ -91,16 +89,16 @@ class Backup(ApiGroup):  # pragma: no cover
                 return format_backup(resp.body["result"])
             raise BackupCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete(self, backup_id: str) -> Result[bool]:
+    async def delete(self, backup_id: str) -> Result[bool]:
         """Delete a backup.
 
         :param backup_id: Backup ID.
         :type backup_id: str
         :return: True if the backup was deleted successfully.
         :rtype: bool
-        :raise arango.exceptions.BackupDeleteError: If delete fails.
+        :raise aioarango.exceptions.BackupDeleteError: If delete fails.
         """
         request = Request(
             method="post", endpoint="/_admin/backup/delete", data={"id": backup_id}
@@ -111,9 +109,9 @@ class Backup(ApiGroup):  # pragma: no cover
                 return True
             raise BackupDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def download(
+    async def download(
         self,
         backup_id: Optional[str] = None,
         repository: Optional[str] = None,
@@ -141,7 +139,7 @@ class Backup(ApiGroup):  # pragma: no cover
         :type download_id: str
         :return: Download details.
         :rtype: dict
-        :raise arango.exceptions.BackupDownloadError: If operation fails.
+        :raise aioarango.exceptions.BackupDownloadError: If operation fails.
         """
         data: Json = {}
         if download_id is not None:
@@ -162,9 +160,9 @@ class Backup(ApiGroup):  # pragma: no cover
                 return format_backup_transfer(resp.body["result"])
             raise BackupDownloadError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def upload(
+    async def upload(
         self,
         backup_id: Optional[str] = None,
         repository: Optional[str] = None,
@@ -192,7 +190,7 @@ class Backup(ApiGroup):  # pragma: no cover
         :type abort: bool
         :return: Upload details.
         :rtype: dict
-        :raise arango.exceptions.BackupUploadError: If upload operation fails.
+        :raise aioarango.exceptions.BackupUploadError: If upload operation fails.
         """
         data: Json = {}
 
@@ -214,16 +212,16 @@ class Backup(ApiGroup):  # pragma: no cover
                 return format_backup_transfer(resp.body["result"])
             raise BackupUploadError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def restore(self, backup_id: str) -> Result[Json]:
+    async def restore(self, backup_id: str) -> Result[Json]:
         """Restore from a local backup.
 
         :param backup_id: Backup ID.
         :type backup_id: str
         :return: Result of the restore operation.
         :rtype: dict
-        :raise arango.exceptions.BackupRestoreError: If restore fails.
+        :raise aioarango.exceptions.BackupRestoreError: If restore fails.
         """
         request = Request(
             method="post", endpoint="/_admin/backup/restore", data={"id": backup_id}
@@ -234,4 +232,4 @@ class Backup(ApiGroup):  # pragma: no cover
                 return format_backup_restore(resp.body["result"])
             raise BackupRestoreError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

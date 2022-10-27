@@ -1,12 +1,10 @@
-__all__ = ["Foxx"]
-
 import os
 from typing import Any, BinaryIO, Dict, Optional, Tuple, Union
 
 from requests_toolbelt import MultipartEncoder
 
-from arango.api import ApiGroup
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.exceptions import (
     FoxxCommitError,
     FoxxConfigGetError,
     FoxxConfigReplaceError,
@@ -29,11 +27,11 @@ from arango.exceptions import (
     FoxxSwaggerGetError,
     FoxxTestRunError,
 )
-from arango.formatter import format_service_data
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json, Jsons, Params
+from aioarango.formatter import format_service_data
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json, Jsons, Params
 
 
 class Foxx(ApiGroup):
@@ -79,14 +77,14 @@ class Foxx(ApiGroup):
 
         return MultipartEncoder(fields=fields)
 
-    def services(self, exclude_system: bool = False) -> Result[Jsons]:
+    async def services(self, exclude_system: bool = False) -> Result[Jsons]:
         """List installed services.
 
         :param exclude_system: If set to True, system services are excluded.
         :type exclude_system: bool
         :return: List of installed service.
         :rtype: [dict]
-        :raise arango.exceptions.FoxxServiceListError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxServiceListError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -99,16 +97,16 @@ class Foxx(ApiGroup):
                 return [format_service_data(service) for service in resp.body]
             raise FoxxServiceListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def service(self, mount: str) -> Result[Json]:
+    async def service(self, mount: str) -> Result[Json]:
         """Return service metadata.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
         :type mount: str
         :return: Service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceGetError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxServiceGetError: If retrieval fails.
         """
         request = Request(
             method="get", endpoint="/_api/foxx/service", params={"mount": mount}
@@ -119,9 +117,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_service(
+    async def create_service(
         self,
         mount: str,
         source: str,
@@ -151,7 +149,7 @@ class Foxx(ApiGroup):
         :type legacy: bool | None
         :return: Service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceCreateError: If install fails.
+        :raise aioarango.exceptions.FoxxServiceCreateError: If install fails.
         """
         params: Params = {"mount": mount}
         if development is not None:
@@ -179,9 +177,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_service_with_file(
+    async def create_service_with_file(
         self,
         mount: str,
         filename: str,
@@ -209,7 +207,7 @@ class Foxx(ApiGroup):
         :type dependencies: dict | None
         :return: Service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceCreateError: If install fails.
+        :raise aioarango.exceptions.FoxxServiceCreateError: If install fails.
         """
         params: Params = {"mount": mount}
         if development is not None:
@@ -233,9 +231,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_service(
+    async def update_service(
         self,
         mount: str,
         source: str,
@@ -268,7 +266,7 @@ class Foxx(ApiGroup):
         :type force: bool | None
         :return: Updated service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceUpdateError: If update fails.
+        :raise aioarango.exceptions.FoxxServiceUpdateError: If update fails.
         """
         params: Params = {"mount": mount}
         if teardown is not None:
@@ -300,9 +298,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_service_with_file(
+    async def update_service_with_file(
         self,
         mount: str,
         filename: str,
@@ -333,7 +331,7 @@ class Foxx(ApiGroup):
         :type dependencies: dict | None
         :return: Updated service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceUpdateError: If update fails.
+        :raise aioarango.exceptions.FoxxServiceUpdateError: If update fails.
         """
         params: Params = {"mount": mount}
         if teardown is not None:
@@ -359,9 +357,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_service(
+    async def replace_service(
         self,
         mount: str,
         source: str,
@@ -394,7 +392,7 @@ class Foxx(ApiGroup):
         :type force: bool | None
         :return: Replaced service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceReplaceError: If replace fails.
+        :raise aioarango.exceptions.FoxxServiceReplaceError: If replace fails.
         """
         params: Params = {"mount": mount}
         if teardown is not None:
@@ -426,9 +424,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_service_with_file(
+    async def replace_service_with_file(
         self,
         mount: str,
         filename: str,
@@ -459,7 +457,7 @@ class Foxx(ApiGroup):
         :type dependencies: dict | None
         :return: Replaced service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxServiceReplaceError: If replace fails.
+        :raise aioarango.exceptions.FoxxServiceReplaceError: If replace fails.
         """
         params: Params = {"mount": mount}
         if teardown is not None:
@@ -485,9 +483,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxServiceReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_service(
+    async def delete_service(
         self, mount: str, teardown: Optional[bool] = None
     ) -> Result[bool]:
         """Uninstall a service.
@@ -498,7 +496,7 @@ class Foxx(ApiGroup):
         :type teardown: bool | None
         :return: True if service was deleted successfully.
         :rtype: bool
-        :raise arango.exceptions.FoxxServiceDeleteError: If delete fails.
+        :raise aioarango.exceptions.FoxxServiceDeleteError: If delete fails.
         """
         params: Params = {"mount": mount}
         if teardown is not None:
@@ -511,16 +509,16 @@ class Foxx(ApiGroup):
                 return True
             raise FoxxServiceDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def config(self, mount: str) -> Result[Json]:
+    async def config(self, mount: str) -> Result[Json]:
         """Return service configuration.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
         :type mount: str
         :return: Configuration values.
         :rtype: dict
-        :raise arango.exceptions.FoxxConfigGetError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxConfigGetError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -533,9 +531,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxConfigGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_config(self, mount: str, config: Json) -> Result[Json]:
+    async def update_config(self, mount: str, config: Json) -> Result[Json]:
         """Update service configuration.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
@@ -544,7 +542,7 @@ class Foxx(ApiGroup):
         :type config: dict
         :return: Updated configuration values.
         :rtype: dict
-        :raise arango.exceptions.FoxxConfigUpdateError: If update fails.
+        :raise aioarango.exceptions.FoxxConfigUpdateError: If update fails.
         """
         request = Request(
             method="patch",
@@ -558,9 +556,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxConfigUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_config(self, mount: str, config: Json) -> Result[Json]:
+    async def replace_config(self, mount: str, config: Json) -> Result[Json]:
         """Replace service configuration.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
@@ -570,7 +568,7 @@ class Foxx(ApiGroup):
         :type config: dict
         :return: Replaced configuration values.
         :rtype: dict
-        :raise arango.exceptions.FoxxConfigReplaceError: If replace fails.
+        :raise aioarango.exceptions.FoxxConfigReplaceError: If replace fails.
         """
         request = Request(
             method="put",
@@ -584,16 +582,16 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxConfigReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def dependencies(self, mount: str) -> Result[Json]:
+    async def dependencies(self, mount: str) -> Result[Json]:
         """Return service dependencies.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
         :type mount: str
         :return: Dependency settings.
         :rtype: dict
-        :raise arango.exceptions.FoxxDependencyGetError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxDependencyGetError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -606,9 +604,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxDependencyGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_dependencies(self, mount: str, dependencies: Json) -> Result[Json]:
+    async def update_dependencies(self, mount: str, dependencies: Json) -> Result[Json]:
         """Update service dependencies.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
@@ -617,7 +615,7 @@ class Foxx(ApiGroup):
         :type dependencies: dict
         :return: Updated dependency settings.
         :rtype: dict
-        :raise arango.exceptions.FoxxDependencyUpdateError: If update fails.
+        :raise aioarango.exceptions.FoxxDependencyUpdateError: If update fails.
         """
         request = Request(
             method="patch",
@@ -631,9 +629,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxDependencyUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_dependencies(self, mount: str, dependencies: Json) -> Result[Json]:
+    async def replace_dependencies(self, mount: str, dependencies: Json) -> Result[Json]:
         """Replace service dependencies.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
@@ -642,7 +640,7 @@ class Foxx(ApiGroup):
         :type dependencies: dict
         :return: Replaced dependency settings.
         :rtype: dict
-        :raise arango.exceptions.FoxxDependencyReplaceError: If replace fails.
+        :raise aioarango.exceptions.FoxxDependencyReplaceError: If replace fails.
         """
         request = Request(
             method="put",
@@ -656,9 +654,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxDependencyReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def enable_development(self, mount: str) -> Result[Json]:
+    async def enable_development(self, mount: str) -> Result[Json]:
         """Put the service into development mode.
 
         While the service is running in development mode, it is reloaded from
@@ -672,7 +670,7 @@ class Foxx(ApiGroup):
         :type mount: str
         :return: Service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxDevModeEnableError: If operation fails.
+        :raise aioarango.exceptions.FoxxDevModeEnableError: If operation fails.
         """
         request = Request(
             method="post",
@@ -685,9 +683,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxDevModeEnableError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def disable_development(self, mount: str) -> Result[Json]:
+    async def disable_development(self, mount: str) -> Result[Json]:
         """Put the service into production mode.
 
         In a cluster with multiple coordinators, the services on all other
@@ -697,7 +695,7 @@ class Foxx(ApiGroup):
         :type mount: str
         :return: Service metadata.
         :rtype: dict
-        :raise arango.exceptions.FoxxDevModeDisableError: If operation fails.
+        :raise aioarango.exceptions.FoxxDevModeDisableError: If operation fails.
         """
         request = Request(
             method="delete",
@@ -710,16 +708,16 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxDevModeDisableError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def readme(self, mount: str) -> Result[str]:
+    async def readme(self, mount: str) -> Result[str]:
         """Return the service readme.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
         :type mount: str
         :return: Service readme.
         :rtype: str
-        :raise arango.exceptions.FoxxReadmeGetError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxReadmeGetError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -732,16 +730,16 @@ class Foxx(ApiGroup):
                 return resp.raw_body
             raise FoxxReadmeGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def swagger(self, mount: str) -> Result[Json]:
+    async def swagger(self, mount: str) -> Result[Json]:
         """Return the Swagger API description for the given service.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
         :type mount: str
         :return: Swagger API description.
         :rtype: dict
-        :raise arango.exceptions.FoxxSwaggerGetError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxSwaggerGetError: If retrieval fails.
         """
         request = Request(
             method="get", endpoint="/_api/foxx/swagger", params={"mount": mount}
@@ -756,9 +754,9 @@ class Foxx(ApiGroup):
                 result["base_path"] = result.pop("basePath")
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def download(self, mount: str) -> Result[str]:
+    async def download(self, mount: str) -> Result[str]:
         """Download service bundle.
 
         When development mode is enabled, a new bundle is created every time.
@@ -769,7 +767,7 @@ class Foxx(ApiGroup):
         :type mount: str
         :return: Service bundle in raw string form.
         :rtype: str
-        :raise arango.exceptions.FoxxDownloadError: If download fails.
+        :raise aioarango.exceptions.FoxxDownloadError: If download fails.
         """
         request = Request(
             method="post", endpoint="/_api/foxx/download", params={"mount": mount}
@@ -780,9 +778,9 @@ class Foxx(ApiGroup):
                 return resp.raw_body
             raise FoxxDownloadError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def commit(self, replace: Optional[bool] = None) -> Result[bool]:
+    async def commit(self, replace: Optional[bool] = None) -> Result[bool]:
         """Commit local service state of the coordinator to the database.
 
         This can be used to resolve service conflicts between coordinators
@@ -792,7 +790,7 @@ class Foxx(ApiGroup):
         :type replace: bool | None
         :return: True if the state was committed successfully.
         :rtype: bool
-        :raise arango.exceptions.FoxxCommitError: If commit fails.
+        :raise aioarango.exceptions.FoxxCommitError: If commit fails.
         """
         params: Params = {}
         if replace is not None:
@@ -805,16 +803,16 @@ class Foxx(ApiGroup):
                 return True
             raise FoxxCommitError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def scripts(self, mount: str) -> Result[Json]:
+    async def scripts(self, mount: str) -> Result[Json]:
         """List service scripts.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
         :type mount: str
         :return: Service scripts.
         :rtype: dict
-        :raise arango.exceptions.FoxxScriptListError: If retrieval fails.
+        :raise aioarango.exceptions.FoxxScriptListError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -827,9 +825,9 @@ class Foxx(ApiGroup):
                 return format_service_data(resp.body)
             raise FoxxScriptListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def run_script(self, mount: str, name: str, arg: Any = None) -> Result[Any]:
+    async def run_script(self, mount: str, name: str, arg: Any = None) -> Result[Any]:
         """Run a service script.
 
         :param mount: Service mount path (e.g "/_admin/aardvark").
@@ -840,7 +838,7 @@ class Foxx(ApiGroup):
         :type arg: Any
         :return: Result of the script, if any.
         :rtype: Any
-        :raise arango.exceptions.FoxxScriptRunError: If script fails.
+        :raise aioarango.exceptions.FoxxScriptRunError: If script fails.
         """
         request = Request(
             method="post",
@@ -854,9 +852,9 @@ class Foxx(ApiGroup):
                 return resp.body
             raise FoxxScriptRunError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def run_tests(
+    async def run_tests(
         self,
         mount: str,
         reporter: str = "default",
@@ -888,7 +886,7 @@ class Foxx(ApiGroup):
         :type name_filter: str
         :return: Reporter output (e.g. raw JSON string, XML, plain text).
         :rtype: str
-        :raise arango.exceptions.FoxxTestRunError: If test fails.
+        :raise aioarango.exceptions.FoxxTestRunError: If test fails.
         """
         params: Params = {"mount": mount, "reporter": reporter}
         if idiomatic is not None:
@@ -913,4 +911,4 @@ class Foxx(ApiGroup):
                 return resp.raw_body
             raise FoxxTestRunError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

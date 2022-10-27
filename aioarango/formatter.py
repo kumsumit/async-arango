@@ -1,6 +1,6 @@
 from typing import Any, Sequence
 
-from arango.typings import Headers, Json
+from aioarango.typings import Headers, Json
 
 
 def verify_format(_: Any, res: Json) -> Json:

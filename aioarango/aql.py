@@ -1,12 +1,10 @@
-__all__ = ["AQL", "AQLQueryCache"]
-
 from numbers import Number
 from typing import MutableMapping, Optional, Sequence, Union
 
-from arango.api import ApiGroup
-from arango.connection import Connection
-from arango.cursor import Cursor
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.connection import Connection
+from aioarango.cursor import Cursor
+from aioarango.exceptions import (
     AQLCacheClearError,
     AQLCacheConfigureError,
     AQLCacheEntriesError,
@@ -24,8 +22,8 @@ from arango.exceptions import (
     AQLQueryTrackingSetError,
     AQLQueryValidateError,
 )
-from arango.executor import ApiExecutor
-from arango.formatter import (
+from aioarango.executor import ApiExecutor
+from aioarango.formatter import (
     format_aql_cache,
     format_aql_query,
     format_aql_tracking,
@@ -33,10 +31,10 @@ from arango.formatter import (
     format_query_cache_entry,
     format_query_rule_item,
 )
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json, Jsons
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json, Jsons
 
 
 class AQLQueryCache(ApiGroup):
@@ -45,12 +43,12 @@ class AQLQueryCache(ApiGroup):
     def __repr__(self) -> str:
         return f"<AQLQueryCache in {self._conn.db_name}>"
 
-    def properties(self) -> Result[Json]:
+    async def properties(self) -> Result[Json]:
         """Return the query cache properties.
 
         :return: Query cache properties.
         :rtype: dict
-        :raise arango.exceptions.AQLCachePropertiesError: If retrieval fails.
+        :raise aioarango.exceptions.AQLCachePropertiesError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/query-cache/properties")
 
@@ -59,9 +57,9 @@ class AQLQueryCache(ApiGroup):
                 raise AQLCachePropertiesError(resp, request)
             return format_aql_cache(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def configure(
+    async def configure(
         self,
         mode: Optional[str] = None,
         max_results: Optional[int] = None,
@@ -87,7 +85,7 @@ class AQLQueryCache(ApiGroup):
         :type include_system: bool
         :return: Query cache properties.
         :rtype: dict
-        :raise arango.exceptions.AQLCacheConfigureError: If operation fails.
+        :raise aioarango.exceptions.AQLCacheConfigureError: If operation fails.
         """
         data: Json = {}
         if mode is not None:
@@ -110,9 +108,9 @@ class AQLQueryCache(ApiGroup):
                 raise AQLCacheConfigureError(resp, request)
             return format_aql_cache(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def entries(self) -> Result[Jsons]:
+    async def entries(self) -> Result[Jsons]:
         """Return the query cache entries.
 
         :return: Query cache entries.
@@ -126,14 +124,14 @@ class AQLQueryCache(ApiGroup):
                 raise AQLCacheEntriesError(resp, request)
             return [format_query_cache_entry(entry) for entry in resp.body]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def clear(self) -> Result[bool]:
+    async def clear(self) -> Result[bool]:
         """Clear the query cache.
 
         :return: True if query cache was cleared successfully.
         :rtype: bool
-        :raise arango.exceptions.AQLCacheClearError: If operation fails.
+        :raise aioarango.exceptions.AQLCacheClearError: If operation fails.
         """
         request = Request(method="delete", endpoint="/_api/query-cache")
 
@@ -142,7 +140,7 @@ class AQLQueryCache(ApiGroup):
                 raise AQLCacheClearError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
 
 class AQL(ApiGroup):
@@ -163,11 +161,11 @@ class AQL(ApiGroup):
         """Return the query cache API wrapper.
 
         :return: Query cache API wrapper.
-        :rtype: arango.aql.AQLQueryCache
+        :rtype: aioarango.aql.AQLQueryCache
         """
         return AQLQueryCache(self._conn, self._executor)
 
-    def explain(
+    async def explain(
         self,
         query: str,
         all_plans: bool = False,
@@ -191,7 +189,7 @@ class AQL(ApiGroup):
         :type bind_vars: dict
         :return: Execution plan, or plans if **all_plans** was set to True.
         :rtype: dict | list
-        :raise arango.exceptions.AQLQueryExplainError: If explain fails.
+        :raise aioarango.exceptions.AQLQueryExplainError: If explain fails.
         """
         options: Json = {"allPlans": all_plans}
         if max_plans is not None:
@@ -219,16 +217,16 @@ class AQL(ApiGroup):
                 plans: Jsons = resp.body["plans"]
                 return plans
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def validate(self, query: str) -> Result[Json]:
+    async def validate(self, query: str) -> Result[Json]:
         """Parse and validate the query without executing it.
 
         :param query: Query to validate.
         :type query: str
         :return: Query details.
         :rtype: dict
-        :raise arango.exceptions.AQLQueryValidateError: If validation fails.
+        :raise aioarango.exceptions.AQLQueryValidateError: If validation fails.
         """
         request = Request(method="post", endpoint="/_api/query", data={"query": query})
 
@@ -241,9 +239,9 @@ class AQL(ApiGroup):
 
             raise AQLQueryValidateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def execute(
+    async def execute(
         self,
         query: str,
         count: bool = False,
@@ -362,8 +360,8 @@ class AQL(ApiGroup):
         :param allow_dirty_read: Allow reads from followers in a cluster.
         :type allow_dirty_read: bool | None
         :return: Result cursor.
-        :rtype: arango.cursor.Cursor
-        :raise arango.exceptions.AQLQueryExecuteError: If execute fails.
+        :rtype: aioarango.cursor.Cursor
+        :raise aioarango.exceptions.AQLQueryExecuteError: If execute fails.
         """
         data: Json = {"query": query, "count": count}
         if batch_size is not None:
@@ -423,16 +421,16 @@ class AQL(ApiGroup):
                 raise AQLQueryExecuteError(resp, request)
             return Cursor(self._conn, resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def kill(self, query_id: str) -> Result[bool]:
+    async def kill(self, query_id: str) -> Result[bool]:
         """Kill a running query.
 
         :param query_id: Query ID.
         :type query_id: str
         :return: True if kill request was sent successfully.
         :rtype: bool
-        :raise arango.exceptions.AQLQueryKillError: If the send fails.
+        :raise aioarango.exceptions.AQLQueryKillError: If the send fails.
         """
         request = Request(method="delete", endpoint=f"/_api/query/{query_id}")
 
@@ -441,14 +439,14 @@ class AQL(ApiGroup):
                 raise AQLQueryKillError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def queries(self) -> Result[Jsons]:
+    async def queries(self) -> Result[Jsons]:
         """Return the currently running AQL queries.
 
         :return: Running AQL queries.
         :rtype: [dict]
-        :raise arango.exceptions.AQLQueryListError: If retrieval fails.
+        :raise aioarango.exceptions.AQLQueryListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/query/current")
 
@@ -457,14 +455,14 @@ class AQL(ApiGroup):
                 raise AQLQueryListError(resp, request)
             return [format_aql_query(q) for q in resp.body]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def slow_queries(self) -> Result[Jsons]:
+    async def slow_queries(self) -> Result[Jsons]:
         """Return a list of all slow AQL queries.
 
         :return: Slow AQL queries.
         :rtype: [dict]
-        :raise arango.exceptions.AQLQueryListError: If retrieval fails.
+        :raise aioarango.exceptions.AQLQueryListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/query/slow")
 
@@ -473,14 +471,14 @@ class AQL(ApiGroup):
                 raise AQLQueryListError(resp, request)
             return [format_aql_query(q) for q in resp.body]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def clear_slow_queries(self) -> Result[bool]:
+    async def clear_slow_queries(self) -> Result[bool]:
         """Clear slow AQL queries.
 
         :return: True if slow queries were cleared successfully.
         :rtype: bool
-        :raise arango.exceptions.AQLQueryClearError: If operation fails.
+        :raise aioarango.exceptions.AQLQueryClearError: If operation fails.
         """
         request = Request(method="delete", endpoint="/_api/query/slow")
 
@@ -489,14 +487,14 @@ class AQL(ApiGroup):
                 raise AQLQueryClearError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def tracking(self) -> Result[Json]:
+    async def tracking(self) -> Result[Json]:
         """Return AQL query tracking properties.
 
         :return: AQL query tracking properties.
         :rtype: dict
-        :raise arango.exceptions.AQLQueryTrackingGetError: If retrieval fails.
+        :raise aioarango.exceptions.AQLQueryTrackingGetError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/query/properties")
 
@@ -505,9 +503,9 @@ class AQL(ApiGroup):
                 raise AQLQueryTrackingGetError(resp, request)
             return format_aql_tracking(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def set_tracking(
+    async def set_tracking(
         self,
         enabled: Optional[bool] = None,
         max_slow_queries: Optional[int] = None,
@@ -536,7 +534,7 @@ class AQL(ApiGroup):
         :type track_slow_queries: bool
         :return: Updated AQL query tracking properties.
         :rtype: dict
-        :raise arango.exceptions.AQLQueryTrackingSetError: If operation fails.
+        :raise aioarango.exceptions.AQLQueryTrackingSetError: If operation fails.
         """
         data: Json = {}
         if enabled is not None:
@@ -559,14 +557,14 @@ class AQL(ApiGroup):
                 raise AQLQueryTrackingSetError(resp, request)
             return format_aql_tracking(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def functions(self) -> Result[Jsons]:
+    async def functions(self) -> Result[Jsons]:
         """List the AQL functions defined in the database.
 
         :return: AQL functions.
         :rtype: [dict]
-        :raise arango.exceptions.AQLFunctionListError: If retrieval fails.
+        :raise aioarango.exceptions.AQLFunctionListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/aqlfunction")
 
@@ -581,9 +579,9 @@ class AQL(ApiGroup):
 
             return functions
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_function(self, name: str, code: str) -> Result[Json]:
+    async def create_function(self, name: str, code: str) -> Result[Json]:
         """Create a new AQL function.
 
         :param name: AQL function name.
@@ -593,7 +591,7 @@ class AQL(ApiGroup):
         :return: Whether the AQL function was newly created or an existing one
             was replaced.
         :rtype: dict
-        :raise arango.exceptions.AQLFunctionCreateError: If create fails.
+        :raise aioarango.exceptions.AQLFunctionCreateError: If create fails.
         """
         request = Request(
             method="post",
@@ -606,9 +604,9 @@ class AQL(ApiGroup):
                 raise AQLFunctionCreateError(resp, request)
             return {"is_new": resp.body["isNewlyCreated"]}
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_function(
+    async def delete_function(
         self, name: str, group: bool = False, ignore_missing: bool = False
     ) -> Result[Union[bool, Json]]:
         """Delete an AQL function.
@@ -626,7 +624,7 @@ class AQL(ApiGroup):
             False if function(s) was not found and **ignore_missing** was set
             to True.
         :rtype: dict | bool
-        :raise arango.exceptions.AQLFunctionDeleteError: If delete fails.
+        :raise aioarango.exceptions.AQLFunctionDeleteError: If delete fails.
         """
         request = Request(
             method="delete",
@@ -643,7 +641,7 @@ class AQL(ApiGroup):
 
         return self._execute(request, response_handler)
 
-    def query_rules(self) -> Result[Jsons]:
+    async def query_rules(self) -> Result[Jsons]:
         """Return the available optimizer rules for AQL queries
 
         :return: The available optimizer rules for AQL queries
@@ -662,4 +660,4 @@ class AQL(ApiGroup):
                 items.append(format_query_rule_item(rule))
             return items
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

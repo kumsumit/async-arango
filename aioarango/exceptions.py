@@ -1,15 +1,15 @@
 from typing import Optional
 
-from arango.request import Request
-from arango.response import Response
+from aioarango.request import Request
+from aioarango.response import Response
 
 
 class ArangoError(Exception):
-    """Base class for all exceptions in python-arango."""
+    """Base class for all exceptions in aioarango."""
 
 
 class ArangoClientError(ArangoError):
-    """Base class for errors originating from python-arango client.
+    """Base class for errors originating from aioarango client.
 
     :param msg: Error message.
     :type msg: str
@@ -39,7 +39,7 @@ class ArangoServerError(ArangoError):
     """Base class for errors originating from ArangoDB server.
 
     :param resp: HTTP response.
-    :type resp: arango.response.Response
+    :type resp: aioarango.response.Response
     :param msg: Error message override.
     :type msg: str
 
@@ -50,9 +50,9 @@ class ArangoServerError(ArangoError):
     :ivar url: API URL.
     :vartype url: str
     :ivar response: HTTP response object.
-    :vartype response: arango.response.Response
+    :vartype response: aioarango.response.Response
     :ivar request: HTTP request object.
-    :vartype request: arango.request.Request
+    :vartype request: aioarango.request.Request
     :ivar http_method: HTTP method in lowercase (e.g. "post").
     :vartype http_method: str
     :ivar http_code: HTTP status code.

@@ -1,8 +1,6 @@
-__all__ = ["Request"]
-
 from typing import Any, MutableMapping, Optional
 
-from arango.typings import Fields, Headers, Params
+from aioarango.typings import Fields, Headers, Params
 
 
 def normalize_headers(headers: Optional[Headers]) -> Headers:

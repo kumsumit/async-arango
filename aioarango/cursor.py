@@ -1,18 +1,16 @@
-__all__ = ["Cursor"]
-
 from collections import deque
 from typing import Any, Deque, Optional, Sequence
 
-from arango.connection import BaseConnection
-from arango.exceptions import (
+from aioarango.connection import BaseConnection
+from aioarango.exceptions import (
     CursorCloseError,
     CursorCountError,
     CursorEmptyError,
     CursorNextError,
     CursorStateError,
 )
-from arango.request import Request
-from arango.typings import Json
+from aioarango.request import Request
+from aioarango.typings import Json
 
 
 class Cursor:
@@ -59,13 +57,13 @@ class Cursor:
         self._warnings = None
         self._update(init_data)
 
-    def __iter__(self) -> "Cursor":
+    def __aiter__(self):
         return self
 
-    def __next__(self) -> Any:  # pragma: no cover
-        return self.next()
+    async def __anext__(self):  # pragma: no cover
+        return await self.next()
 
-    def __enter__(self) -> "Cursor":
+    async def __aenter__(self):
         return self
 
     def __len__(self) -> int:
@@ -73,8 +71,8 @@ class Cursor:
             raise CursorCountError("cursor count not enabled")
         return self._count
 
-    def __exit__(self, *_: Any) -> None:
-        self.close(ignore_missing=True)
+    async def __aexit__(self, *_: Any) -> None:
+        await self.close(ignore_missing=True)
 
     def __repr__(self) -> str:
         return f"<Cursor {self._id}>" if self._id else "<Cursor>"
@@ -226,21 +224,21 @@ class Cursor:
         """
         return len(self._batch) == 0
 
-    def next(self) -> Any:
+    async def next(self) -> Any:
         """Pop the next item from the current batch.
 
         If current batch is empty/depleted, an API request is automatically
         sent to ArangoDB server to fetch the next batch and update the cursor.
 
         :return: Next item in current batch.
-        :raise StopIteration: If the result set is depleted.
-        :raise arango.exceptions.CursorNextError: If batch retrieval fails.
-        :raise arango.exceptions.CursorStateError: If cursor ID is not set.
+        :raise StopAsyncIteration: If the result set is depleted.
+        :raise aioarango.exceptions.CursorNextError: If batch retrieval fails.
+        :raise aioarango.exceptions.CursorStateError: If cursor ID is not set.
         """
         if self.empty():
             if not self.has_more():
-                raise StopIteration
-            self.fetch()
+                raise StopAsyncIteration
+            await self.fetch()
 
         return self.pop()
 
@@ -248,35 +246,35 @@ class Cursor:
         """Pop the next item from current batch.
 
         If current batch is empty/depleted, an exception is raised. You must
-        call :func:`arango.cursor.Cursor.fetch` to manually fetch the next
+        call :func:`aioarango.cursor.Cursor.fetch` to manually fetch the next
         batch from server.
 
         :return: Next item in current batch.
-        :raise arango.exceptions.CursorEmptyError: If current batch is empty.
+        :raise aioarango.exceptions.CursorEmptyError: If current batch is empty.
         """
         if len(self._batch) == 0:
             raise CursorEmptyError("current batch is empty")
         return self._batch.popleft()
 
-    def fetch(self) -> Json:
+    async def fetch(self) -> Json:
         """Fetch the next batch from server and update the cursor.
 
         :return: New batch details.
         :rtype: dict
-        :raise arango.exceptions.CursorNextError: If batch retrieval fails.
-        :raise arango.exceptions.CursorStateError: If cursor ID is not set.
+        :raise aioarango.exceptions.CursorNextError: If batch retrieval fails.
+        :raise aioarango.exceptions.CursorStateError: If cursor ID is not set.
         """
         if self._id is None:
             raise CursorStateError("cursor ID not set")
         request = Request(method="put", endpoint=f"/_api/{self._type}/{self._id}")
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
 
         if not resp.is_success:
             raise CursorNextError(resp, request)
 
         return self._update(resp.body)
 
-    def close(self, ignore_missing: bool = False) -> Optional[bool]:
+    async def close(self, ignore_missing: bool = False) -> Optional[bool]:
         """Close the cursor and free any server resources tied to it.
 
         :param ignore_missing: Do not raise exception on missing cursors.
@@ -286,13 +284,13 @@ class Cursor:
             if there are no cursors to close server-side (e.g. result set is
             smaller than the batch size).
         :rtype: bool | None
-        :raise arango.exceptions.CursorCloseError: If operation fails.
-        :raise arango.exceptions.CursorStateError: If cursor ID is not set.
+        :raise aioarango.exceptions.CursorCloseError: If operation fails.
+        :raise aioarango.exceptions.CursorStateError: If cursor ID is not set.
         """
         if self._id is None:
             return None
         request = Request(method="delete", endpoint=f"/_api/{self._type}/{self._id}")
-        resp = self._conn.send_request(request)
+        resp = await self._conn.send_request(request)
         if resp.is_success:
             return True
         if resp.status_code == 404 and ignore_missing:

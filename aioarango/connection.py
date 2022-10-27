@@ -1,44 +1,37 @@
-__all__ = [
-    "BaseConnection",
-    "BasicConnection",
-    "Connection",
-    "JwtConnection",
-    "JwtSuperuserConnection",
-]
-
 import logging
 import sys
 import time
 from abc import abstractmethod
 from typing import Any, Callable, Optional, Sequence, Set, Tuple, Union
 
+import httpx
 import jwt
 from requests import ConnectionError, Session
 from requests_toolbelt import MultipartEncoder
 
-from arango.exceptions import JWTAuthError, ServerConnectionError
-from arango.http import HTTPClient
-from arango.request import Request
-from arango.resolver import HostResolver
-from arango.response import Response
-from arango.typings import Fields, Json
+from aioarango.exceptions import JWTAuthError, ServerConnectionError
+from aioarango.http import HTTPClient
+from aioarango.request import Request
+from aioarango.resolver import HostResolver
+from aioarango.response import Response
+from aioarango.typings import Fields, Json
 
-Connection = Union["BasicConnection", "JwtConnection", "JwtSuperuserConnection"]
+Connection = Union['BaseConnection', 'JwtConnection', 'JwtSuperuserConnection']
 
 
-class BaseConnection:
+class BaseConnection(object):
     """Base connection to a specific ArangoDB database."""
 
     def __init__(
         self,
         hosts: Fields,
         host_resolver: HostResolver,
-        sessions: Sequence[Session],
+        sessions: Sequence[httpx.AsyncClient],
         db_name: str,
         http_client: HTTPClient,
         serializer: Callable[..., str],
         deserializer: Callable[[str], Any],
-    ) -> None:
+    ):
         self._url_prefixes = [f"{host}/_db/{db_name}" for host in hosts]
         self._host_resolver = host_resolver
         self._sessions = sessions
@@ -95,9 +88,9 @@ class BaseConnection:
         :param deserialize: Deserialize the response body.
         :type deserialize: bool
         :param resp: HTTP response.
-        :type resp: arango.response.Response
+        :type resp: aioarango.response.Response
         :return: HTTP response.
-        :rtype: arango.response.Response
+        :rtype: aioarango.response.Response
         """
         if deserialize:
             resp.body = self.deserialize(resp.raw_body)
@@ -113,7 +106,7 @@ class BaseConnection:
         resp.is_success = http_ok and resp.error_code is None
         return resp
 
-    def process_request(
+    async def process_request(
         self, host_index: int, request: Request, auth: Optional[Tuple[str, str]] = None
     ) -> Response:
         """Execute a request until a valid response has been returned.
@@ -129,7 +122,7 @@ class BaseConnection:
         indexes_to_filter: Set[int] = set()
         while tries < self._host_resolver.max_tries:
             try:
-                resp = self._http.send_request(
+                resp = await self._http.send_request(
                     session=self._sessions[host_index],
                     method=request.method,
                     url=self._url_prefixes[host_index] + request.endpoint,
@@ -159,11 +152,11 @@ class BaseConnection:
         """Build and return a bulk error response.
 
         :param parent_response: Parent response.
-        :type parent_response: arango.response.Response
+        :type parent_response: aioarango.response.Response
         :param body: Error response body.
         :type body: dict
         :return: Child bulk error response.
-        :rtype: arango.response.Response
+        :rtype: aioarango.response.Response
         """
         resp = Response(
             method=parent_response.method,
@@ -189,19 +182,21 @@ class BaseConnection:
         """
         if data is None:
             return None
-        elif isinstance(data, (str, MultipartEncoder)):
+        elif isinstance(data, str):
             return data
+        elif isinstance(data, MultipartEncoder):
+            return data.read()
         else:
             return self.serialize(data)
 
-    def ping(self) -> int:
+    async def ping(self) -> int:
         """Ping the next host to check if connection is established.
 
         :return: Response status code.
         :rtype: int
         """
         request = Request(method="get", endpoint="/_api/collection")
-        resp = self.send_request(request)
+        resp = await self.send_request(request)
         if resp.status_code in {401, 403}:
             raise ServerConnectionError("bad username and/or password")
         if not resp.is_success:  # pragma: no cover
@@ -209,13 +204,13 @@ class BaseConnection:
         return resp.status_code
 
     @abstractmethod
-    def send_request(self, request: Request) -> Response:  # pragma: no cover
+    async def send_request(self, request: Request) -> Response:  # pragma: no cover
         """Send an HTTP request to ArangoDB server.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :return: HTTP response.
-        :rtype: arango.response.Response
+        :rtype: aioarango.response.Response
         """
         raise NotImplementedError
 
@@ -226,7 +221,7 @@ class BasicConnection(BaseConnection):
     :param hosts: Host URL or list of URLs (coordinators in a cluster).
     :type hosts: [str]
     :param host_resolver: Host resolver (used for clusters).
-    :type host_resolver: arango.resolver.HostResolver
+    :type host_resolver: aioarango.resolver.HostResolver
     :param sessions: HTTP session objects per host.
     :type sessions: [requests.Session]
     :param db_name: Database name.
@@ -236,14 +231,14 @@ class BasicConnection(BaseConnection):
     :param password: Password.
     :type password: str
     :param http_client: User-defined HTTP client.
-    :type http_client: arango.http.HTTPClient
+    :type http_client: aioarango.http.HTTPClient
     """
 
     def __init__(
         self,
         hosts: Fields,
         host_resolver: HostResolver,
-        sessions: Sequence[Session],
+        sessions: Sequence[httpx.AsyncClient],
         db_name: str,
         username: str,
         password: str,
@@ -263,16 +258,16 @@ class BasicConnection(BaseConnection):
         self._username = username
         self._auth = (username, password)
 
-    def send_request(self, request: Request) -> Response:
+    async def send_request(self, request: Request) -> Response:
         """Send an HTTP request to ArangoDB server.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :return: HTTP response.
-        :rtype: arango.response.Response
+        :rtype: aioarango.response.Response
         """
         host_index = self._host_resolver.get_host_index()
-        return self.process_request(host_index, request, auth=self._auth)
+        return await self.process_request(host_index, request, auth=self._auth)
 
 
 class JwtConnection(BaseConnection):
@@ -281,7 +276,7 @@ class JwtConnection(BaseConnection):
     :param hosts: Host URL or list of URLs (coordinators in a cluster).
     :type hosts: [str]
     :param host_resolver: Host resolver (used for clusters).
-    :type host_resolver: arango.resolver.HostResolver
+    :type host_resolver: aioarango.resolver.HostResolver
     :param sessions: HTTP session objects per host.
     :type sessions: [requests.Session]
     :param db_name: Database name.
@@ -291,14 +286,14 @@ class JwtConnection(BaseConnection):
     :param password: Password.
     :type password: str
     :param http_client: User-defined HTTP client.
-    :type http_client: arango.http.HTTPClient
+    :type http_client: aioarango.http.HTTPClient
     """
 
     def __init__(
         self,
         hosts: Fields,
         host_resolver: HostResolver,
-        sessions: Sequence[Session],
+        sessions: Sequence[httpx.AsyncClient],
         db_name: str,
         username: str,
         password: str,
@@ -323,22 +318,20 @@ class JwtConnection(BaseConnection):
         self._token: Optional[str] = None
         self._token_exp: int = sys.maxsize
 
-        self.refresh_token()
-
-    def send_request(self, request: Request) -> Response:
+    async def send_request(self, request: Request) -> Response:
         """Send an HTTP request to ArangoDB server.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :return: HTTP response.
-        :rtype: arango.response.Response
+        :rtype: aioarango.response.Response
         """
         host_index = self._host_resolver.get_host_index()
 
         if self._auth_header is not None:
             request.headers["Authorization"] = self._auth_header
 
-        resp = self.process_request(host_index, request)
+        resp = await self.process_request(host_index, request)
 
         # Refresh the token and retry on HTTP 401 and error code 11.
         if resp.error_code != 11 or resp.status_code != 401:
@@ -348,14 +341,14 @@ class JwtConnection(BaseConnection):
         if self._token_exp < now - self.exp_leeway:  # pragma: no cover
             return resp
 
-        self.refresh_token()
+        await self.refresh_token()
 
         if self._auth_header is not None:
             request.headers["Authorization"] = self._auth_header
 
-        return self.process_request(host_index, request)
+        return await self.process_request(host_index, request)
 
-    def refresh_token(self) -> None:
+    async def refresh_token(self) -> None:
         """Get a new JWT token for the current user (cannot be a superuser).
 
         :return: JWT token.
@@ -369,7 +362,7 @@ class JwtConnection(BaseConnection):
 
         host_index = self._host_resolver.get_host_index()
 
-        resp = self.process_request(host_index, request)
+        resp = await self.process_request(host_index, request)
 
         if not resp.is_success:
             raise JWTAuthError(resp, request)
@@ -399,13 +392,13 @@ class JwtSuperuserConnection(BaseConnection):
     :param hosts: Host URL or list of URLs (coordinators in a cluster).
     :type hosts: [str]
     :param host_resolver: Host resolver (used for clusters).
-    :type host_resolver: arango.resolver.HostResolver
+    :type host_resolver: aioarango.resolver.HostResolver
     :param sessions: HTTP session objects per host.
     :type sessions: [requests.Session]
     :param db_name: Database name.
     :type db_name: str
     :param http_client: User-defined HTTP client.
-    :type http_client: arango.http.HTTPClient
+    :type http_client: aioarango.http.HTTPClient
     :param superuser_token: User generated token for superuser access.
     :type superuser_token: str
     """
@@ -414,7 +407,7 @@ class JwtSuperuserConnection(BaseConnection):
         self,
         hosts: Fields,
         host_resolver: HostResolver,
-        sessions: Sequence[Session],
+        sessions: Sequence[httpx.AsyncClient],
         db_name: str,
         http_client: HTTPClient,
         serializer: Callable[..., str],
@@ -432,15 +425,15 @@ class JwtSuperuserConnection(BaseConnection):
         )
         self._auth_header = f"bearer {superuser_token}"
 
-    def send_request(self, request: Request) -> Response:
+    async def send_request(self, request: Request) -> Response:
         """Send an HTTP request to ArangoDB server.
 
         :param request: HTTP request.
-        :type request: arango.request.Request
+        :type request: aioarango.request.Request
         :return: HTTP response.
-        :rtype: arango.response.Response
+        :rtype: aioarango.response.Response
         """
         host_index = self._host_resolver.get_host_index()
         request.headers["Authorization"] = self._auth_header
 
-        return self.process_request(host_index, request)
+        return await self.process_request(host_index, request)

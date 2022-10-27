@@ -2,17 +2,17 @@ __all__ = ["Pregel"]
 
 from typing import Optional, Sequence
 
-from arango.api import ApiGroup
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.exceptions import (
     PregelJobCreateError,
     PregelJobDeleteError,
     PregelJobGetError,
 )
-from arango.formatter import format_pregel_job_data, format_pregel_job_list
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json
+from aioarango.formatter import format_pregel_job_data, format_pregel_job_list
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json
 
 
 class Pregel(ApiGroup):
@@ -21,14 +21,14 @@ class Pregel(ApiGroup):
     def __repr__(self) -> str:
         return f"<Pregel in {self._conn.db_name}>"
 
-    def job(self, job_id: int) -> Result[Json]:
+    async def job(self, job_id: int) -> Result[Json]:
         """Return the details of a Pregel job.
 
         :param job_id: Pregel job ID.
         :type job_id: int
         :return: Details of the Pregel job.
         :rtype: dict
-        :raise arango.exceptions.PregelJobGetError: If retrieval fails.
+        :raise aioarango.exceptions.PregelJobGetError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/control_pregel/{job_id}")
 
@@ -37,9 +37,9 @@ class Pregel(ApiGroup):
                 return format_pregel_job_data(resp.body)
             raise PregelJobGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_job(
+    async def create_job(
         self,
         graph: str,
         algorithm: str,
@@ -82,7 +82,7 @@ class Pregel(ApiGroup):
         :type edgeCollections: Sequence[str] | None
         :return: Pregel job ID.
         :rtype: int
-        :raise arango.exceptions.PregelJobCreateError: If create fails.
+        :raise aioarango.exceptions.PregelJobCreateError: If create fails.
         """
         data: Json = {"algorithm": algorithm, "graphName": graph}
 
@@ -114,16 +114,16 @@ class Pregel(ApiGroup):
                 return int(resp.body)
             raise PregelJobCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_job(self, job_id: int) -> Result[bool]:
+    async def delete_job(self, job_id: int) -> Result[bool]:
         """Delete a Pregel job.
 
         :param job_id: Pregel job ID.
         :type job_id: int
         :return: True if Pregel job was deleted successfully.
         :rtype: bool
-        :raise arango.exceptions.PregelJobDeleteError: If delete fails.
+        :raise aioarango.exceptions.PregelJobDeleteError: If delete fails.
         """
         request = Request(method="delete", endpoint=f"/_api/control_pregel/{job_id}")
 
@@ -132,9 +132,9 @@ class Pregel(ApiGroup):
                 return True
             raise PregelJobDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def jobs(self) -> Result[Json]:
+    async def jobs(self) -> Result[Json]:
         """Returns a list of currently running and recently
             finished Pregel jobs without retrieving their results.
 
@@ -149,4 +149,4 @@ class Pregel(ApiGroup):
                 return format_pregel_job_list(resp.body)
             raise PregelJobGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)

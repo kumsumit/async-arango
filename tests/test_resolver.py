@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 from typing import Set
 
 import pytest
 
 from arango.resolver import (
+=======
+from aioarango.resolver import (
+>>>>>>> aioarango/main
     RandomHostResolver,
     RoundRobinHostResolver,
     SingleHostResolver,

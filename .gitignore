@@ -120,4 +120,4 @@ node_modules/
 .direnv/
 
 # setuptools_scm
-arango/version.py
+aioarango/version.py

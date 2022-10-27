@@ -1,11 +1,9 @@
-__all__ = ["Graph"]
-
 from typing import List, Optional, Sequence, Union
 
-from arango.api import ApiGroup
-from arango.collection import EdgeCollection, VertexCollection
-from arango.connection import Connection
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.collection import EdgeCollection, VertexCollection
+from aioarango.connection import Connection
+from aioarango.exceptions import (
     EdgeDefinitionCreateError,
     EdgeDefinitionDeleteError,
     EdgeDefinitionListError,
@@ -16,13 +14,13 @@ from arango.exceptions import (
     VertexCollectionDeleteError,
     VertexCollectionListError,
 )
-from arango.executor import ApiExecutor
-from arango.formatter import format_graph_properties
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json, Jsons
-from arango.utils import get_col_name, get_doc_id
+from aioarango.executor import ApiExecutor
+from aioarango.formatter import format_graph_properties
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json, Jsons
+from aioarango.utils import get_col_name, get_doc_id
 
 
 class Graph(ApiGroup):
@@ -43,7 +41,7 @@ class Graph(ApiGroup):
         :param vertex: Vertex document ID or body with "_id" field.
         :type vertex: str | dict
         :return: Vertex collection API wrapper.
-        :rtype: arango.collection.VertexCollection
+        :rtype: aioarango.collection.VertexCollection
         """
         return self.vertex_collection(get_col_name(vertex))
 
@@ -53,7 +51,7 @@ class Graph(ApiGroup):
         :param edge: Edge document ID or body with "_id" field.
         :type edge: str | dict
         :return: Edge collection API wrapper.
-        :rtype: arango.collection.EdgeCollection
+        :rtype: aioarango.collection.EdgeCollection
         """
         return self.edge_collection(get_col_name(edge))
 
@@ -66,12 +64,12 @@ class Graph(ApiGroup):
         """
         return self._name
 
-    def properties(self) -> Result[Json]:
+    async def properties(self) -> Result[Json]:
         """Return graph properties.
 
         :return: Graph properties.
         :rtype: dict
-        :raise arango.exceptions.GraphPropertiesError: If retrieval fails.
+        :raise aioarango.exceptions.GraphPropertiesError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/gharial/{self._name}")
 
@@ -80,13 +78,13 @@ class Graph(ApiGroup):
                 return format_graph_properties(resp.body["graph"])
             raise GraphPropertiesError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ################################
     # Vertex Collection Management #
     ################################
 
-    def has_vertex_collection(self, name: str) -> Result[bool]:
+    async def has_vertex_collection(self, name: str) -> Result[bool]:
         """Check if the graph has the given vertex collection.
 
         :param name: Vertex collection name.
@@ -104,14 +102,14 @@ class Graph(ApiGroup):
                 return name in resp.body["collections"]
             raise VertexCollectionListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def vertex_collections(self) -> Result[List[str]]:
+    async def vertex_collections(self) -> Result[List[str]]:
         """Return vertex collections in the graph that are not orphaned.
 
         :return: Names of vertex collections that are not orphaned.
         :rtype: [str]
-        :raise arango.exceptions.VertexCollectionListError: If retrieval fails.
+        :raise aioarango.exceptions.VertexCollectionListError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -123,7 +121,7 @@ class Graph(ApiGroup):
                 raise VertexCollectionListError(resp, request)
             return sorted(set(resp.body["collections"]))
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     def vertex_collection(self, name: str) -> VertexCollection:
         """Return the vertex collection API wrapper.
@@ -131,18 +129,18 @@ class Graph(ApiGroup):
         :param name: Vertex collection name.
         :type name: str
         :return: Vertex collection API wrapper.
-        :rtype: arango.collection.VertexCollection
+        :rtype: aioarango.collection.VertexCollection
         """
         return VertexCollection(self._conn, self._executor, self._name, name)
 
-    def create_vertex_collection(self, name: str) -> Result[VertexCollection]:
+    async def create_vertex_collection(self, name: str) -> Result[VertexCollection]:
         """Create a vertex collection in the graph.
 
         :param name: Vertex collection name.
         :type name: str
         :return: Vertex collection API wrapper.
-        :rtype: arango.collection.VertexCollection
-        :raise arango.exceptions.VertexCollectionCreateError: If create fails.
+        :rtype: aioarango.collection.VertexCollection
+        :raise aioarango.exceptions.VertexCollectionCreateError: If create fails.
         """
         request = Request(
             method="post",
@@ -155,9 +153,9 @@ class Graph(ApiGroup):
                 return self.vertex_collection(name)
             raise VertexCollectionCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_vertex_collection(self, name: str, purge: bool = False) -> Result[bool]:
+    async def delete_vertex_collection(self, name: str, purge: bool = False) -> Result[bool]:
         """Remove a vertex collection from the graph.
 
         :param name: Vertex collection name.
@@ -167,7 +165,7 @@ class Graph(ApiGroup):
         :type purge: bool
         :return: True if vertex collection was deleted successfully.
         :rtype: bool
-        :raise arango.exceptions.VertexCollectionDeleteError: If delete fails.
+        :raise aioarango.exceptions.VertexCollectionDeleteError: If delete fails.
         """
         request = Request(
             method="delete",
@@ -180,13 +178,13 @@ class Graph(ApiGroup):
                 return True
             raise VertexCollectionDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ##############################
     # Edge Collection Management #
     ##############################
 
-    def has_edge_definition(self, name: str) -> Result[bool]:
+    async def has_edge_definition(self, name: str) -> Result[bool]:
         """Check if the graph has the given edge definition.
 
         :param name: Edge collection name.
@@ -206,9 +204,9 @@ class Graph(ApiGroup):
                 for edge_definition in body["edgeDefinitions"]
             )
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def has_edge_collection(self, name: str) -> Result[bool]:
+    async def has_edge_collection(self, name: str) -> Result[bool]:
         """Check if the graph has the given edge collection.
 
         :param name: Edge collection name.
@@ -216,7 +214,7 @@ class Graph(ApiGroup):
         :return: True if edge collection exists, False otherwise.
         :rtype: bool
         """
-        return self.has_edge_definition(name)
+        return await self.has_edge_definition(name)
 
     def edge_collection(self, name: str) -> EdgeCollection:
         """Return the edge collection API wrapper.
@@ -224,16 +222,16 @@ class Graph(ApiGroup):
         :param name: Edge collection name.
         :type name: str
         :return: Edge collection API wrapper.
-        :rtype: arango.collection.EdgeCollection
+        :rtype: aioarango.collection.EdgeCollection
         """
         return EdgeCollection(self._conn, self._executor, self._name, name)
 
-    def edge_definitions(self) -> Result[Jsons]:
+    async def edge_definitions(self) -> Result[Jsons]:
         """Return the edge definitions of the graph.
 
         :return: Edge definitions of the graph.
         :rtype: [dict]
-        :raise arango.exceptions.EdgeDefinitionListError: If retrieval fails.
+        :raise aioarango.exceptions.EdgeDefinitionListError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/gharial/{self._name}")
 
@@ -251,9 +249,9 @@ class Graph(ApiGroup):
                 for edge_definition in body["edgeDefinitions"]
             ]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_edge_definition(
+    async def create_edge_definition(
         self,
         edge_collection: str,
         from_vertex_collections: Sequence[str],
@@ -279,8 +277,8 @@ class Graph(ApiGroup):
         :param to_vertex_collections: Names of "to" vertex collections.
         :type to_vertex_collections: [str]
         :return: Edge collection API wrapper.
-        :rtype: arango.collection.EdgeCollection
-        :raise arango.exceptions.EdgeDefinitionCreateError: If create fails.
+        :rtype: aioarango.collection.EdgeCollection
+        :raise aioarango.exceptions.EdgeDefinitionCreateError: If create fails.
         """
         request = Request(
             method="post",
@@ -297,9 +295,9 @@ class Graph(ApiGroup):
                 return self.edge_collection(edge_collection)
             raise EdgeDefinitionCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_edge_definition(
+    async def replace_edge_definition(
         self,
         edge_collection: str,
         from_vertex_collections: Sequence[str],
@@ -314,8 +312,8 @@ class Graph(ApiGroup):
         :param to_vertex_collections: Names of "to" vertex collections.
         :type to_vertex_collections: [str]
         :return: Edge collection API wrapper.
-        :rtype: arango.collection.EdgeCollection
-        :raise arango.exceptions.EdgeDefinitionReplaceError: If replace fails.
+        :rtype: aioarango.collection.EdgeCollection
+        :raise aioarango.exceptions.EdgeDefinitionReplaceError: If replace fails.
         """
         request = Request(
             method="put",
@@ -332,9 +330,9 @@ class Graph(ApiGroup):
                 return self.edge_collection(edge_collection)
             raise EdgeDefinitionReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_edge_definition(self, name: str, purge: bool = False) -> Result[bool]:
+    async def delete_edge_definition(self, name: str, purge: bool = False) -> Result[bool]:
         """Delete an edge definition from the graph.
 
         :param name: Edge collection name.
@@ -345,7 +343,7 @@ class Graph(ApiGroup):
         :type purge: bool
         :return: True if edge definition was deleted successfully.
         :rtype: bool
-        :raise arango.exceptions.EdgeDefinitionDeleteError: If delete fails.
+        :raise aioarango.exceptions.EdgeDefinitionDeleteError: If delete fails.
         """
         request = Request(
             method="delete",
@@ -358,13 +356,13 @@ class Graph(ApiGroup):
                 return True
             raise EdgeDefinitionDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ###################
     # Graph Functions #
     ###################
 
-    def traverse(
+    async def traverse(
         self,
         start_vertex: Union[str, Json],
         direction: str = "outbound",
@@ -439,7 +437,7 @@ class Graph(ApiGroup):
         :type expander_func: str | None
         :return: Visited edges and vertices.
         :rtype: dict
-        :raise arango.exceptions.GraphTraverseError: If traversal fails.
+        :raise aioarango.exceptions.GraphTraverseError: If traversal fails.
         """
         if strategy is not None:
             if strategy.lower() == "dfs":
@@ -483,13 +481,13 @@ class Graph(ApiGroup):
             result: Json = resp.body["result"]["visited"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     #####################
     # Vertex Management #
     #####################
 
-    def has_vertex(
+    async def has_vertex(
         self,
         vertex: Union[str, Json],
         rev: Optional[str] = None,
@@ -507,12 +505,12 @@ class Graph(ApiGroup):
         :type check_rev: bool
         :return: True if vertex document exists, False otherwise.
         :rtype: bool
-        :raise arango.exceptions.DocumentGetError: If check fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If check fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_vertex(vertex).has(vertex, rev, check_rev)
+        return await self._get_col_by_vertex(vertex).has(vertex, rev, check_rev)
 
-    def vertex(
+    async def vertex(
         self,
         vertex: Union[str, Json],
         rev: Optional[str] = None,
@@ -530,12 +528,12 @@ class Graph(ApiGroup):
         :type check_rev: bool
         :return: Vertex document or None if not found.
         :rtype: dict | None
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_vertex(vertex).get(vertex, rev, check_rev)
+        return await self._get_col_by_vertex(vertex).get(vertex, rev, check_rev)
 
-    def insert_vertex(
+    async def insert_vertex(
         self,
         collection: str,
         vertex: Json,
@@ -558,11 +556,11 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
-        return self.vertex_collection(collection).insert(vertex, sync, silent)
+        return await self.vertex_collection(collection).insert(vertex, sync, silent)
 
-    def update_vertex(
+    async def update_vertex(
         self,
         vertex: Json,
         check_rev: bool = True,
@@ -589,10 +587,10 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_vertex(vertex).update(
+        return await self._get_col_by_vertex(vertex).update(
             vertex=vertex,
             check_rev=check_rev,
             keep_none=keep_none,
@@ -600,7 +598,7 @@ class Graph(ApiGroup):
             silent=silent,
         )
 
-    def replace_vertex(
+    async def replace_vertex(
         self,
         vertex: Json,
         check_rev: bool = True,
@@ -623,14 +621,14 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_vertex(vertex).replace(
+        return await self._get_col_by_vertex(vertex).replace(
             vertex=vertex, check_rev=check_rev, sync=sync, silent=silent
         )
 
-    def delete_vertex(
+    async def delete_vertex(
         self,
         vertex: Json,
         rev: Optional[str] = None,
@@ -658,10 +656,10 @@ class Graph(ApiGroup):
             not found and **ignore_missing** was set to True (does not apply in
             transactions).
         :rtype: bool
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_vertex(vertex).delete(
+        return await self._get_col_by_vertex(vertex).delete(
             vertex=vertex,
             rev=rev,
             check_rev=check_rev,
@@ -673,7 +671,7 @@ class Graph(ApiGroup):
     # Edge Management #
     ###################
 
-    def has_edge(
+    async def has_edge(
         self, edge: Union[str, Json], rev: Optional[str] = None, check_rev: bool = True
     ) -> Result[bool]:
         """Check if the given edge document exists in the graph.
@@ -688,12 +686,12 @@ class Graph(ApiGroup):
         :type check_rev: bool
         :return: True if edge document exists, False otherwise.
         :rtype: bool
-        :raise arango.exceptions.DocumentInError: If check fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentInError: If check fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_edge(edge).has(edge, rev, check_rev)
+        return await self._get_col_by_edge(edge).has(edge, rev, check_rev)
 
-    def edge(
+    async def edge(
         self, edge: Union[str, Json], rev: Optional[str] = None, check_rev: bool = True
     ) -> Result[Optional[Json]]:
         """Return an edge document.
@@ -708,12 +706,12 @@ class Graph(ApiGroup):
         :type check_rev: bool
         :return: Edge document or None if not found.
         :rtype: dict | None
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_edge(edge).get(edge, rev, check_rev)
+        return await self._get_col_by_edge(edge).get(edge, rev, check_rev)
 
-    def insert_edge(
+    async def insert_edge(
         self,
         collection: str,
         edge: Json,
@@ -737,11 +735,11 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
-        return self.edge_collection(collection).insert(edge, sync, silent)
+        return await self.edge_collection(collection).insert(edge, sync, silent)
 
-    def update_edge(
+    async def update_edge(
         self,
         edge: Json,
         check_rev: bool = True,
@@ -768,10 +766,10 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_edge(edge).update(
+        return await self._get_col_by_edge(edge).update(
             edge=edge,
             check_rev=check_rev,
             keep_none=keep_none,
@@ -779,7 +777,7 @@ class Graph(ApiGroup):
             silent=silent,
         )
 
-    def replace_edge(
+    async def replace_edge(
         self,
         edge: Json,
         check_rev: bool = True,
@@ -803,14 +801,14 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_edge(edge).replace(
+        return await self._get_col_by_edge(edge).replace(
             edge=edge, check_rev=check_rev, sync=sync, silent=silent
         )
 
-    def delete_edge(
+    async def delete_edge(
         self,
         edge: Union[str, Json],
         rev: Optional[str] = None,
@@ -838,10 +836,10 @@ class Graph(ApiGroup):
             found and **ignore_missing** was set to True (does not  apply in
             transactions).
         :rtype: bool
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_edge(edge).delete(
+        return await self._get_col_by_edge(edge).delete(
             edge=edge,
             rev=rev,
             check_rev=check_rev,
@@ -849,7 +847,7 @@ class Graph(ApiGroup):
             sync=sync,
         )
 
-    def link(
+    async def link(
         self,
         collection: str,
         from_vertex: Union[str, Json],
@@ -878,9 +876,9 @@ class Graph(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
-        return self.edge_collection(collection).link(
+        return await self.edge_collection(collection).link(
             from_vertex=from_vertex,
             to_vertex=to_vertex,
             data=data,
@@ -888,7 +886,7 @@ class Graph(ApiGroup):
             silent=silent,
         )
 
-    def edges(
+    async def edges(
         self, collection: str, vertex: Union[str, Json], direction: Optional[str] = None
     ) -> Result[Json]:
         """Return the edge documents coming in and/or out of given vertex.
@@ -902,6 +900,6 @@ class Graph(ApiGroup):
         :type direction: str
         :return: List of edges and statistics.
         :rtype: dict
-        :raise arango.exceptions.EdgeListError: If retrieval fails.
+        :raise aioarango.exceptions.EdgeListError: If retrieval fails.
         """
-        return self.edge_collection(collection).edges(vertex, direction)
+        return await self.edge_collection(collection).edges(vertex, direction)

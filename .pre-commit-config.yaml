@@ -24,8 +24,12 @@ repos:
     rev: v0.931
     hooks:
       - id: mypy
+<<<<<<< HEAD
         files: ^arango/
         additional_dependencies: ['types-requests']
+=======
+        files: ^aioarango/
+>>>>>>> aioarango/main
   - repo: https://gitlab.com/pycqa/flake8
     rev: 4.0.1
     hooks:

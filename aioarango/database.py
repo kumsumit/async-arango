@@ -1,16 +1,14 @@
-__all__ = ["StandardDatabase", "AsyncDatabase", "BatchDatabase", "TransactionDatabase"]
-
 from datetime import datetime
 from numbers import Number
 from typing import Any, List, Optional, Sequence, Union
 
-from arango.api import ApiGroup
-from arango.aql import AQL
-from arango.backup import Backup
-from arango.cluster import Cluster
-from arango.collection import StandardCollection
-from arango.connection import Connection
-from arango.exceptions import (
+from aioarango.api import ApiGroup
+from aioarango.aql import AQL
+from aioarango.backup import Backup
+from aioarango.cluster import Cluster
+from aioarango.collection import StandardCollection
+from aioarango.connection import Connection
+from aioarango.exceptions import (
     AnalyzerCreateError,
     AnalyzerDeleteError,
     AnalyzerGetError,
@@ -71,30 +69,30 @@ from arango.exceptions import (
     ViewReplaceError,
     ViewUpdateError,
 )
-from arango.executor import (
+from aioarango.executor import (
     AsyncApiExecutor,
     BatchApiExecutor,
     DefaultApiExecutor,
     TransactionApiExecutor,
 )
-from arango.formatter import (
+from aioarango.formatter import (
     format_body,
     format_database,
     format_server_status,
     format_tls,
     format_view,
 )
-from arango.foxx import Foxx
-from arango.graph import Graph
-from arango.job import BatchJob
-from arango.pregel import Pregel
-from arango.replication import Replication
-from arango.request import Request
-from arango.response import Response
-from arango.result import Result
-from arango.typings import Json, Jsons, Params
-from arango.utils import get_col_name
-from arango.wal import WAL
+from aioarango.foxx import Foxx
+from aioarango.graph import Graph
+from aioarango.job import BatchJob
+from aioarango.pregel import Pregel
+from aioarango.replication import Replication
+from aioarango.request import Request
+from aioarango.response import Response
+from aioarango.result import Result
+from aioarango.typings import Json, Jsons, Params
+from aioarango.utils import get_col_name
+from aioarango.wal import WAL
 
 
 class Database(ApiGroup):
@@ -106,7 +104,7 @@ class Database(ApiGroup):
         :param name: Collection name.
         :type name: str
         :return: Collection API wrapper.
-        :rtype: arango.collection.StandardCollection
+        :rtype: aioarango.collection.StandardCollection
         """
         return self.collection(name)
 
@@ -116,8 +114,8 @@ class Database(ApiGroup):
         :param document: Document ID or body with "_id" field.
         :type document: str | dict
         :return: Collection API wrapper.
-        :rtype: arango.collection.StandardCollection
-        :raise arango.exceptions.DocumentParseError: On malformed document.
+        :rtype: aioarango.collection.StandardCollection
+        :raise aioarango.exceptions.DocumentParseError: On malformed document.
         """
         return self.collection(get_col_name(document))
 
@@ -135,7 +133,7 @@ class Database(ApiGroup):
         """Return AQL (ArangoDB Query Language) API wrapper.
 
         :return: AQL API wrapper.
-        :rtype: arango.aql.AQL
+        :rtype: aioarango.aql.AQL
         """
         return AQL(self._conn, self._executor)
 
@@ -144,7 +142,7 @@ class Database(ApiGroup):
         """Return WAL (Write-Ahead Log) API wrapper.
 
         :return: WAL API wrapper.
-        :rtype: arango.wal.WAL
+        :rtype: aioarango.wal.WAL
         """
         return WAL(self._conn, self._executor)
 
@@ -153,7 +151,7 @@ class Database(ApiGroup):
         """Return Foxx API wrapper.
 
         :return: Foxx API wrapper.
-        :rtype: arango.foxx.Foxx
+        :rtype: aioarango.foxx.Foxx
         """
         return Foxx(self._conn, self._executor)
 
@@ -162,7 +160,7 @@ class Database(ApiGroup):
         """Return Pregel API wrapper.
 
         :return: Pregel API wrapper.
-        :rtype: arango.pregel.Pregel
+        :rtype: aioarango.pregel.Pregel
         """
         return Pregel(self._conn, self._executor)
 
@@ -171,7 +169,7 @@ class Database(ApiGroup):
         """Return Replication API wrapper.
 
         :return: Replication API wrapper.
-        :rtype: arango.replication.Replication
+        :rtype: aioarango.replication.Replication
         """
         return Replication(self._conn, self._executor)
 
@@ -180,7 +178,7 @@ class Database(ApiGroup):
         """Return Cluster API wrapper.
 
         :return: Cluster API wrapper.
-        :rtype: arango.cluster.Cluster
+        :rtype: aioarango.cluster.Cluster
         """
         return Cluster(self._conn, self._executor)
 
@@ -189,16 +187,16 @@ class Database(ApiGroup):
         """Return Backup API wrapper.
 
         :return: Backup API wrapper.
-        :rtype: arango.backup.Backup
+        :rtype: aioarango.backup.Backup
         """
         return Backup(self._conn, self._executor)
 
-    def properties(self) -> Result[Json]:
+    async def properties(self) -> Result[Json]:
         """Return database properties.
 
         :return: Database properties.
         :rtype: dict
-        :raise arango.exceptions.DatabasePropertiesError: If retrieval fails.
+        :raise aioarango.exceptions.DatabasePropertiesError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -210,9 +208,9 @@ class Database(ApiGroup):
                 raise DatabasePropertiesError(resp, request)
             return format_database(resp.body["result"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def execute_transaction(
+    async def execute_transaction(
         self,
         command: str,
         params: Optional[Json] = None,
@@ -261,7 +259,7 @@ class Database(ApiGroup):
         :type allow_dirty_read: bool | None
         :return: Return value of **command**.
         :rtype: Any
-        :raise arango.exceptions.TransactionExecuteError: If execution fails.
+        :raise aioarango.exceptions.TransactionExecuteError: If execution fails.
         """
         collections: Json = {"allowImplicit": allow_implicit}
         if read is not None:
@@ -298,14 +296,14 @@ class Database(ApiGroup):
 
             return resp.body.get("result")
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def version(self) -> Result[str]:
+    async def version(self) -> Result[str]:
         """Return ArangoDB server version.
 
         :return: Server version.
         :rtype: str
-        :raise arango.exceptions.ServerVersionError: If retrieval fails.
+        :raise aioarango.exceptions.ServerVersionError: If retrieval fails.
         """
         request = Request(
             method="get", endpoint="/_api/version", params={"details": False}
@@ -316,14 +314,14 @@ class Database(ApiGroup):
                 raise ServerVersionError(resp, request)
             return str(resp.body["version"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def details(self) -> Result[Json]:
+    async def details(self) -> Result[Json]:
         """Return ArangoDB server details.
 
         :return: Server details.
         :rtype: dict
-        :raise arango.exceptions.ServerDetailsError: If retrieval fails.
+        :raise aioarango.exceptions.ServerDetailsError: If retrieval fails.
         """
         request = Request(
             method="get", endpoint="/_api/version", params={"details": True}
@@ -335,14 +333,14 @@ class Database(ApiGroup):
                 return result
             raise ServerDetailsError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def status(self) -> Result[Json]:
+    async def status(self) -> Result[Json]:
         """Return ArangoDB server status.
 
         :return: Server status.
         :rtype: dict
-        :raise arango.exceptions.ServerStatusError: If retrieval fails.
+        :raise aioarango.exceptions.ServerStatusError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -354,14 +352,14 @@ class Database(ApiGroup):
                 raise ServerStatusError(resp, request)
             return format_server_status(resp.body)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def required_db_version(self) -> Result[str]:
+    async def required_db_version(self) -> Result[str]:
         """Return required version of target database.
 
         :return: Required version of target database.
         :rtype: str
-        :raise arango.exceptions.ServerRequiredDBVersionError: If retrieval fails.
+        :raise aioarango.exceptions.ServerRequiredDBVersionError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_admin/database/target-version")
 
@@ -370,14 +368,14 @@ class Database(ApiGroup):
                 return str(resp.body["version"])
             raise ServerRequiredDBVersionError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def engine(self) -> Result[Json]:
+    async def engine(self) -> Result[Json]:
         """Return the database engine details.
 
         :return: Database engine details.
         :rtype: dict
-        :raise arango.exceptions.ServerEngineError: If retrieval fails.
+        :raise aioarango.exceptions.ServerEngineError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/engine")
 
@@ -386,14 +384,14 @@ class Database(ApiGroup):
                 return format_body(resp.body)
             raise ServerEngineError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def statistics(self, description: bool = False) -> Result[Json]:
+    async def statistics(self, description: bool = False) -> Result[Json]:
         """Return server statistics.
 
         :return: Server statistics.
         :rtype: dict
-        :raise arango.exceptions.ServerStatisticsError: If retrieval fails.
+        :raise aioarango.exceptions.ServerStatisticsError: If retrieval fails.
         """
         if description:
             endpoint = "/_admin/statistics-description"
@@ -407,16 +405,16 @@ class Database(ApiGroup):
                 return format_body(resp.body)
             raise ServerStatisticsError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def role(self) -> Result[str]:
+    async def role(self) -> Result[str]:
         """Return server role.
 
         :return: Server role. Possible values are "SINGLE" (server which is not
             in a cluster), "COORDINATOR" (cluster coordinator), "PRIMARY",
             "SECONDARY", "AGENT" (Agency node in a cluster) or "UNDEFINED".
         :rtype: str
-        :raise arango.exceptions.ServerRoleError: If retrieval fails.
+        :raise aioarango.exceptions.ServerRoleError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_admin/server/role")
 
@@ -425,14 +423,14 @@ class Database(ApiGroup):
                 return str(resp.body["role"])
             raise ServerRoleError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def time(self) -> Result[datetime]:
+    async def time(self) -> Result[datetime]:
         """Return server system time.
 
         :return: Server system time.
         :rtype: datetime.datetime
-        :raise arango.exceptions.ServerTimeError: If retrieval fails.
+        :raise aioarango.exceptions.ServerTimeError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_admin/time")
 
@@ -441,14 +439,14 @@ class Database(ApiGroup):
                 raise ServerTimeError(resp, request)
             return datetime.fromtimestamp(resp.body["time"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def echo(self) -> Result[Json]:
+    async def echo(self) -> Result[Json]:
         """Return details of the last request (e.g. headers, payload).
 
         :return: Details of the last request.
         :rtype: dict
-        :raise arango.exceptions.ServerEchoError: If retrieval fails.
+        :raise aioarango.exceptions.ServerEchoError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_admin/echo")
 
@@ -458,14 +456,14 @@ class Database(ApiGroup):
             result: Json = resp.body
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def shutdown(self) -> Result[bool]:  # pragma: no cover
+    async def shutdown(self) -> Result[bool]:  # pragma: no cover
         """Initiate server shutdown sequence.
 
         :return: True if the server was shutdown successfully.
         :rtype: bool
-        :raise arango.exceptions.ServerShutdownError: If shutdown fails.
+        :raise aioarango.exceptions.ServerShutdownError: If shutdown fails.
         """
         request = Request(method="delete", endpoint="/_admin/shutdown")
 
@@ -474,16 +472,16 @@ class Database(ApiGroup):
                 raise ServerShutdownError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def run_tests(self, tests: Sequence[str]) -> Result[Json]:  # pragma: no cover
+    async def run_tests(self, tests: Sequence[str]) -> Result[Json]:  # pragma: no cover
         """Run available unittests on the server.
 
         :param tests: List of files containing the test suites.
         :type tests: [str]
         :return: Test results.
         :rtype: dict
-        :raise arango.exceptions.ServerRunTestsError: If execution fails.
+        :raise aioarango.exceptions.ServerRunTestsError: If execution fails.
         """
         request = Request(method="post", endpoint="/_admin/test", data={"tests": tests})
 
@@ -493,9 +491,9 @@ class Database(ApiGroup):
             result: Json = resp.body
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def read_log(
+    async def read_log(
         self,
         upto: Optional[Union[int, str]] = None,
         level: Optional[Union[int, str]] = None,
@@ -530,7 +528,7 @@ class Database(ApiGroup):
         :type sort: str
         :return: Server log entries.
         :rtype: dict
-        :raise arango.exceptions.ServerReadLogError: If read fails.
+        :raise aioarango.exceptions.ServerReadLogError: If read fails.
         """
         params = dict()
         if upto is not None:
@@ -559,9 +557,9 @@ class Database(ApiGroup):
                 resp.body["total_amount"] = resp.body.pop("totalAmount")
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def log_levels(self) -> Result[Json]:
+    async def log_levels(self) -> Result[Json]:
         """Return current logging levels.
 
         :return: Current logging levels.
@@ -575,9 +573,9 @@ class Database(ApiGroup):
             result: Json = resp.body
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def set_log_levels(self, **kwargs: str) -> Result[Json]:
+    async def set_log_levels(self, **kwargs: str) -> Result[Json]:
         """Set the logging levels.
 
         This method takes arbitrary keyword arguments where the keys are the
@@ -585,7 +583,7 @@ class Database(ApiGroup):
 
         .. code-block:: python
 
-            arango.set_log_levels(
+            aioarango.set_log_levels(
                 agency='DEBUG',
                 collector='INFO',
                 threads='WARNING'
@@ -604,14 +602,14 @@ class Database(ApiGroup):
             result: Json = resp.body
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def reload_routing(self) -> Result[bool]:
+    async def reload_routing(self) -> Result[bool]:
         """Reload the routing information.
 
         :return: True if routing was reloaded successfully.
         :rtype: bool
-        :raise arango.exceptions.ServerReloadRoutingError: If reload fails.
+        :raise aioarango.exceptions.ServerReloadRoutingError: If reload fails.
         """
         request = Request(method="post", endpoint="/_admin/routing/reload")
 
@@ -620,9 +618,9 @@ class Database(ApiGroup):
                 raise ServerReloadRoutingError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def metrics(self) -> Result[str]:
+    async def metrics(self) -> Result[str]:
         """Return server metrics in Prometheus format.
 
         :return: Server metrics in Prometheus format.
@@ -635,9 +633,9 @@ class Database(ApiGroup):
                 return resp.raw_body
             raise ServerMetricsError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def jwt_secrets(self) -> Result[Json]:  # pragma: no cover
+    async def jwt_secrets(self) -> Result[Json]:  # pragma: no cover
         """Return information on currently loaded JWT secrets.
 
         :return: Information on currently loaded JWT secrets.
@@ -651,9 +649,9 @@ class Database(ApiGroup):
             result: Json = resp.body["result"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def reload_jwt_secrets(self) -> Result[Json]:  # pragma: no cover
+    async def reload_jwt_secrets(self) -> Result[Json]:  # pragma: no cover
         """Hot-reload JWT secrets.
 
         Calling this without payload reloads JWT secrets from disk. Only files
@@ -672,9 +670,9 @@ class Database(ApiGroup):
             result: Json = resp.body["result"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def tls(self) -> Result[Json]:
+    async def tls(self) -> Result[Json]:
         """Return TLS data (server key, client-auth CA).
 
         :return: TLS data.
@@ -687,9 +685,9 @@ class Database(ApiGroup):
                 raise ServerTLSError(resp, request)
             return format_tls(resp.body["result"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def reload_tls(self) -> Result[Json]:
+    async def reload_tls(self) -> Result[Json]:
         """Reload TLS data (server key, client-auth CA).
 
         :return: New TLS data.
@@ -702,16 +700,16 @@ class Database(ApiGroup):
                 raise ServerTLSReloadError(resp, request)
             return format_tls(resp.body["result"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def encryption(self) -> Result[Json]:
+    async def encryption(self) -> Result[Json]:
         """Rotate the user-supplied keys for encryption.
 
         This method is available only for enterprise edition of ArangoDB.
 
         :return: New TLS data.
         :rtype: dict
-        :raise arango.exceptions.ServerEncryptionError: If retrieval fails.
+        :raise aioarango.exceptions.ServerEncryptionError: If retrieval fails.
         """
         request = Request(method="post", endpoint="/_admin/server/encryption")
 
@@ -721,18 +719,18 @@ class Database(ApiGroup):
                 return result
             raise ServerEncryptionError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     #######################
     # Database Management #
     #######################
 
-    def databases(self) -> Result[List[str]]:
+    async def databases(self) -> Result[List[str]]:
         """Return the names all databases.
 
         :return: Database names.
         :rtype: [str]
-        :raise arango.exceptions.DatabaseListError: If retrieval fails.
+        :raise aioarango.exceptions.DatabaseListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/database")
 
@@ -742,9 +740,9 @@ class Database(ApiGroup):
             result: List[str] = resp.body["result"]
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def has_database(self, name: str) -> Result[bool]:
+    async def has_database(self, name: str) -> Result[bool]:
         """Check if a database exists.
 
         :param name: Database name.
@@ -759,9 +757,9 @@ class Database(ApiGroup):
                 raise DatabaseListError(resp, request)
             return name in resp.body["result"]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_database(
+    async def create_database(
         self,
         name: str,
         users: Optional[Sequence[Json]] = None,
@@ -797,7 +795,7 @@ class Database(ApiGroup):
         :type sharding: str
         :return: True if database was created successfully.
         :rtype: bool
-        :raise arango.exceptions.DatabaseCreateError: If create fails.
+        :raise aioarango.exceptions.DatabaseCreateError: If create fails.
 
         Here is an example entry for parameter **users**:
 
@@ -840,9 +838,9 @@ class Database(ApiGroup):
                 raise DatabaseCreateError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_database(self, name: str, ignore_missing: bool = False) -> Result[bool]:
+    async def delete_database(self, name: str, ignore_missing: bool = False) -> Result[bool]:
         """Delete the database.
 
         :param name: Database name.
@@ -852,7 +850,7 @@ class Database(ApiGroup):
         :return: True if database was deleted successfully, False if database
             was not found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.DatabaseDeleteError: If delete fails.
+        :raise aioarango.exceptions.DatabaseDeleteError: If delete fails.
         """
         request = Request(method="delete", endpoint=f"/_api/database/{name}")
 
@@ -863,7 +861,7 @@ class Database(ApiGroup):
                 raise DatabaseDeleteError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     #########################
     # Collection Management #
@@ -875,11 +873,11 @@ class Database(ApiGroup):
         :param name: Collection name.
         :type name: str
         :return: Standard collection API wrapper.
-        :rtype: arango.collection.StandardCollection
+        :rtype: aioarango.collection.StandardCollection
         """
         return StandardCollection(self._conn, self._executor, name)
 
-    def has_collection(self, name: str) -> Result[bool]:
+    async def has_collection(self, name):
         """Check if collection exists in the database.
 
         :param name: Collection name.
@@ -894,14 +892,14 @@ class Database(ApiGroup):
                 raise CollectionListError(resp, request)
             return any(col["name"] == name for col in resp.body["result"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def collections(self) -> Result[Jsons]:
+    async def collections(self) -> Result[Jsons]:
         """Return the collections in the database.
 
         :return: Collections in the database and their details.
         :rtype: [dict]
-        :raise arango.exceptions.CollectionListError: If retrieval fails.
+        :raise aioarango.exceptions.CollectionListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/collection")
 
@@ -919,9 +917,9 @@ class Database(ApiGroup):
                 for col in resp.body["result"]
             ]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_collection(
+    async def create_collection(
         self,
         name: str,
         sync: bool = False,
@@ -1026,8 +1024,8 @@ class Database(ApiGroup):
             information on computed values.
         :type computedValues: list
         :return: Standard collection API wrapper.
-        :rtype: arango.collection.StandardCollection
-        :raise arango.exceptions.CollectionCreateError: If create fails.
+        :rtype: aioarango.collection.StandardCollection
+        :raise aioarango.exceptions.CollectionCreateError: If create fails.
         """
         key_options: Json = {"type": key_generator, "allowUserKeys": user_keys}
         if key_increment is not None:
@@ -1076,9 +1074,9 @@ class Database(ApiGroup):
                 return self.collection(name)
             raise CollectionCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_collection(
+    async def delete_collection(
         self, name: str, ignore_missing: bool = False, system: Optional[bool] = None
     ) -> Result[bool]:
         """Delete the collection.
@@ -1092,7 +1090,7 @@ class Database(ApiGroup):
         :return: True if collection was deleted successfully, False if
             collection was not found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.CollectionDeleteError: If delete fails.
+        :raise aioarango.exceptions.CollectionDeleteError: If delete fails.
         """
         params: Params = {}
         if system is not None:
@@ -1109,7 +1107,7 @@ class Database(ApiGroup):
                 raise CollectionDeleteError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ####################
     # Graph Management #
@@ -1121,15 +1119,15 @@ class Database(ApiGroup):
         :param name: Graph name.
         :type name: str
         :return: Graph API wrapper.
-        :rtype: arango.graph.Graph
+        :rtype: aioarango.graph.Graph
         """
         return Graph(self._conn, self._executor, name)
 
-    def has_graph(self, name: str) -> Result[bool]:
+    async def has_graph(self, name: str) -> Result[bool]:
         """Check if a graph exists in the database.
 
         :param name: Graph name.
-        :type name: str
+        :type name: str | unicode
         :return: True if graph exists, False otherwise.
         :rtype: bool
         """
@@ -1140,14 +1138,14 @@ class Database(ApiGroup):
                 raise GraphListError(resp, request)
             return any(name == graph["_key"] for graph in resp.body["graphs"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def graphs(self) -> Result[Jsons]:
+    async def graphs(self) -> Result[Jsons]:
         """List all graphs in the database.
 
         :return: Graphs in the database.
         :rtype: [dict]
-        :raise arango.exceptions.GraphListError: If retrieval fails.
+        :raise aioarango.exceptions.GraphListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/gharial")
 
@@ -1174,9 +1172,9 @@ class Database(ApiGroup):
                 for body in resp.body["graphs"]
             ]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_graph(
+    async def create_graph(
         self,
         name: str,
         edge_definitions: Optional[Sequence[Json]] = None,
@@ -1235,8 +1233,8 @@ class Database(ApiGroup):
             Default value is 1. Used for clusters only.
         :type write_concern: int
         :return: Graph API wrapper.
-        :rtype: arango.graph.Graph
-        :raise arango.exceptions.GraphCreateError: If create fails.
+        :rtype: aioarango.graph.Graph
+        :raise aioarango.exceptions.GraphCreateError: If create fails.
 
         Here is an example entry for parameter **edge_definitions**:
 
@@ -1282,9 +1280,9 @@ class Database(ApiGroup):
                 return Graph(self._conn, self._executor, name)
             raise GraphCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_graph(
+    async def delete_graph(
         self,
         name: str,
         ignore_missing: bool = False,
@@ -1302,7 +1300,7 @@ class Database(ApiGroup):
         :return: True if graph was deleted successfully, False if graph was not
             found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.GraphDeleteError: If delete fails.
+        :raise aioarango.exceptions.GraphDeleteError: If delete fails.
         """
         params: Params = {}
         if drop_collections is not None:
@@ -1319,13 +1317,13 @@ class Database(ApiGroup):
                 raise GraphDeleteError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     #######################
     # Document Management #
     #######################
 
-    def has_document(
+    async def has_document(
         self, document: Json, rev: Optional[str] = None, check_rev: bool = True
     ) -> Result[bool]:
         """Check if a document exists.
@@ -1340,14 +1338,14 @@ class Database(ApiGroup):
         :type check_rev: bool
         :return: True if document exists, False otherwise.
         :rtype: bool
-        :raise arango.exceptions.DocumentInError: If check fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentInError: If check fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_doc(document).has(
+        return await self._get_col_by_doc(document).has(
             document=document, rev=rev, check_rev=check_rev
         )
 
-    def document(
+    async def document(
         self, document: Json, rev: Optional[str] = None, check_rev: bool = True
     ) -> Result[Optional[Json]]:
         """Return a document.
@@ -1362,14 +1360,14 @@ class Database(ApiGroup):
         :type check_rev: bool
         :return: Document, or None if not found.
         :rtype: dict | None
-        :raise arango.exceptions.DocumentGetError: If retrieval fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentGetError: If retrieval fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_doc(document).get(
+        return await self._get_col_by_doc(document).get(
             document=document, rev=rev, check_rev=check_rev
         )
 
-    def insert_document(
+    async def insert_document(
         self,
         collection: str,
         document: Json,
@@ -1420,9 +1418,9 @@ class Database(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentInsertError: If insert fails.
+        :raise aioarango.exceptions.DocumentInsertError: If insert fails.
         """
-        return self.collection(collection).insert(
+        return await self.collection(collection).insert(
             document=document,
             return_new=return_new,
             sync=sync,
@@ -1434,7 +1432,7 @@ class Database(ApiGroup):
             merge=merge,
         )
 
-    def update_document(
+    async def update_document(
         self,
         document: Json,
         check_rev: bool = True,
@@ -1471,10 +1469,10 @@ class Database(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentUpdateError: If update fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentUpdateError: If update fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_doc(document).update(
+        return await self._get_col_by_doc(document).update(
             document=document,
             check_rev=check_rev,
             merge=merge,
@@ -1485,7 +1483,7 @@ class Database(ApiGroup):
             silent=silent,
         )
 
-    def replace_document(
+    async def replace_document(
         self,
         document: Json,
         check_rev: bool = True,
@@ -1515,10 +1513,10 @@ class Database(ApiGroup):
         :return: Document metadata (e.g. document key, revision) or True if
             parameter **silent** was set to True.
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentReplaceError: If replace fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentReplaceError: If replace fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_doc(document).replace(
+        return await self._get_col_by_doc(document).replace(
             document=document,
             check_rev=check_rev,
             return_new=return_new,
@@ -1527,7 +1525,7 @@ class Database(ApiGroup):
             silent=silent,
         )
 
-    def delete_document(
+    async def delete_document(
         self,
         document: Union[str, Json],
         rev: Optional[str] = None,
@@ -1564,10 +1562,10 @@ class Database(ApiGroup):
             found and **ignore_missing** was set to True (does not apply in
             transactions).
         :rtype: bool | dict
-        :raise arango.exceptions.DocumentDeleteError: If delete fails.
-        :raise arango.exceptions.DocumentRevisionError: If revisions mismatch.
+        :raise aioarango.exceptions.DocumentDeleteError: If delete fails.
+        :raise aioarango.exceptions.DocumentRevisionError: If revisions mismatch.
         """
-        return self._get_col_by_doc(document).delete(
+        return await self._get_col_by_doc(document).delete(
             document=document,
             rev=rev,
             check_rev=check_rev,
@@ -1581,12 +1579,12 @@ class Database(ApiGroup):
     # Task Management #
     ###################
 
-    def tasks(self) -> Result[Jsons]:
+    async def tasks(self) -> Result[Jsons]:
         """Return all currently active server tasks.
 
         :return: Currently active server tasks.
         :rtype: [dict]
-        :raise arango.exceptions.TaskListError: If retrieval fails.
+        :raise aioarango.exceptions.TaskListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/tasks")
 
@@ -1596,16 +1594,16 @@ class Database(ApiGroup):
             result: Jsons = resp.body
             return result
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def task(self, task_id: str) -> Result[Json]:
+    async def task(self, task_id: str) -> Result[Json]:
         """Return the details of an active server task.
 
         :param task_id: Server task ID.
         :type task_id: str
         :return: Server task details.
         :rtype: dict
-        :raise arango.exceptions.TaskGetError: If retrieval fails.
+        :raise aioarango.exceptions.TaskGetError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/tasks/{task_id}")
 
@@ -1614,9 +1612,9 @@ class Database(ApiGroup):
                 return format_body(resp.body)
             raise TaskGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_task(
+    async def create_task(
         self,
         name: str,
         command: str,
@@ -1643,7 +1641,7 @@ class Database(ApiGroup):
         :type task_id: str | None
         :return: Details of the new task.
         :rtype: dict
-        :raise arango.exceptions.TaskCreateError: If create fails.
+        :raise aioarango.exceptions.TaskCreateError: If create fails.
         """
         data: Json = {"name": name, "command": command}
         if params is not None:
@@ -1665,9 +1663,9 @@ class Database(ApiGroup):
                 return format_body(resp.body)
             raise TaskCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_task(self, task_id: str, ignore_missing: bool = False) -> Result[bool]:
+    async def delete_task(self, task_id: str, ignore_missing: bool = False) -> Result[bool]:
         """Delete a server task.
 
         :param task_id: Server task ID.
@@ -1677,7 +1675,7 @@ class Database(ApiGroup):
         :return: True if task was successfully deleted, False if task was not
             found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.TaskDeleteError: If delete fails.
+        :raise aioarango.exceptions.TaskDeleteError: If delete fails.
         """
         request = Request(method="delete", endpoint=f"/_api/tasks/{task_id}")
 
@@ -1688,13 +1686,13 @@ class Database(ApiGroup):
                 raise TaskDeleteError(resp, request)
             return True
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ###################
     # User Management #
     ###################
 
-    def has_user(self, username: str) -> Result[bool]:
+    async def has_user(self, username: str) -> Result[bool]:
         """Check if user exists.
 
         :param username: Username.
@@ -1709,14 +1707,14 @@ class Database(ApiGroup):
                 raise UserListError(resp, request)
             return any(user["user"] == username for user in resp.body["result"])
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def users(self) -> Result[Jsons]:
+    async def users(self) -> Result[Jsons]:
         """Return all user details.
 
         :return: List of user details.
         :rtype: [dict]
-        :raise arango.exceptions.UserListError: If retrieval fails.
+        :raise aioarango.exceptions.UserListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/user")
 
@@ -1732,16 +1730,16 @@ class Database(ApiGroup):
                 for record in resp.body["result"]
             ]
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def user(self, username: str) -> Result[Json]:
+    async def user(self, username: str) -> Result[Json]:
         """Return user details.
 
         :param username: Username.
         :type username: str
         :return: User details.
         :rtype: dict
-        :raise arango.exceptions.UserGetError: If retrieval fails.
+        :raise aioarango.exceptions.UserGetError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/user/{username}")
 
@@ -1754,9 +1752,9 @@ class Database(ApiGroup):
                 "extra": resp.body["extra"],
             }
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_user(
+    async def create_user(
         self,
         username: str,
         password: Optional[str] = None,
@@ -1775,7 +1773,7 @@ class Database(ApiGroup):
         :type extra: dict | None
         :return: New user details.
         :rtype: dict
-        :raise arango.exceptions.UserCreateError: If create fails.
+        :raise aioarango.exceptions.UserCreateError: If create fails.
         """
         data: Json = {"user": username, "passwd": password, "active": active}
         if extra is not None:
@@ -1792,9 +1790,9 @@ class Database(ApiGroup):
                 "extra": resp.body["extra"],
             }
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_user(
+    async def update_user(
         self,
         username: str,
         password: Optional[str] = None,
@@ -1813,7 +1811,7 @@ class Database(ApiGroup):
         :type extra: dict | None
         :return: New user details.
         :rtype: dict
-        :raise arango.exceptions.UserUpdateError: If update fails.
+        :raise aioarango.exceptions.UserUpdateError: If update fails.
         """
         data: Json = {}
         if password is not None:
@@ -1838,9 +1836,9 @@ class Database(ApiGroup):
                 "extra": resp.body["extra"],
             }
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_user(
+    async def replace_user(
         self,
         username: str,
         password: str,
@@ -1859,7 +1857,7 @@ class Database(ApiGroup):
         :type extra: dict | None
         :return: New user details.
         :rtype: dict
-        :raise arango.exceptions.UserReplaceError: If replace fails.
+        :raise aioarango.exceptions.UserReplaceError: If replace fails.
         """
         data: Json = {"user": username, "passwd": password}
         if active is not None:
@@ -1878,9 +1876,9 @@ class Database(ApiGroup):
                 }
             raise UserReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_user(self, username: str, ignore_missing: bool = False) -> Result[bool]:
+    async def delete_user(self, username: str, ignore_missing: bool = False) -> Result[bool]:
         """Delete a user.
 
         :param username: Username.
@@ -1890,7 +1888,7 @@ class Database(ApiGroup):
         :return: True if user was deleted successfully, False if user was not
             found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.UserDeleteError: If delete fails.
+        :raise aioarango.exceptions.UserDeleteError: If delete fails.
         """
         request = Request(method="delete", endpoint=f"/_api/user/{username}")
 
@@ -1901,20 +1899,20 @@ class Database(ApiGroup):
                 return False
             raise UserDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     #########################
     # Permission Management #
     #########################
 
-    def permissions(self, username: str) -> Result[Json]:
+    async def permissions(self, username: str) -> Result[Json]:
         """Return user permissions for all databases and collections.
 
         :param username: Username.
         :type username: str
         :return: User permissions for all databases and collections.
         :rtype: dict
-        :raise arango.exceptions.PermissionListError: If retrieval fails.
+        :raise aioarango.exceptions.PermissionListError: If retrieval fails.
         """
         request = Request(
             method="get",
@@ -1928,9 +1926,9 @@ class Database(ApiGroup):
                 return result
             raise PermissionListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def permission(
+    async def permission(
         self, username: str, database: str, collection: Optional[str] = None
     ) -> Result[str]:
         """Return user permission for a specific database or collection.
@@ -1943,7 +1941,7 @@ class Database(ApiGroup):
         :type collection: str | None
         :return: Permission for given database or collection.
         :rtype: str
-        :raise arango.exceptions.PermissionGetError: If retrieval fails.
+        :raise aioarango.exceptions.PermissionGetError: If retrieval fails.
         """
         endpoint = f"/_api/user/{username}/database/{database}"
         if collection is not None:
@@ -1955,9 +1953,9 @@ class Database(ApiGroup):
                 return str(resp.body["result"])
             raise PermissionGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_permission(
+    async def update_permission(
         self,
         username: str,
         permission: str,
@@ -1977,7 +1975,7 @@ class Database(ApiGroup):
         :type collection: str | None
         :return: True if access was granted successfully.
         :rtype: bool
-        :raise arango.exceptions.PermissionUpdateError: If update fails.
+        :raise aioarango.exceptions.PermissionUpdateError: If update fails.
         """
         endpoint = f"/_api/user/{username}/database/{database}"
         if collection is not None:
@@ -1990,9 +1988,9 @@ class Database(ApiGroup):
                 return True
             raise PermissionUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def reset_permission(
+    async def reset_permission(
         self, username: str, database: str, collection: Optional[str] = None
     ) -> Result[bool]:
         """Reset user permission for a specific database or collection.
@@ -2005,7 +2003,7 @@ class Database(ApiGroup):
         :type collection: str
         :return: True if permission was reset successfully.
         :rtype: bool
-        :raise arango.exceptions.PermissionRestError: If reset fails.
+        :raise aioarango.exceptions.PermissionRestError: If reset fails.
         """
         endpoint = f"/_api/user/{username}/database/{database}"
         if collection is not None:
@@ -2018,13 +2016,13 @@ class Database(ApiGroup):
                 return True
             raise PermissionResetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ########################
     # Async Job Management #
     ########################
 
-    def async_jobs(self, status: str, count: Optional[int] = None) -> Result[List[str]]:
+    async def async_jobs(self, status: str, count: Optional[int] = None) -> Result[List[str]]:
         """Return IDs of async jobs with given status.
 
         :param status: Job status (e.g. "pending", "done").
@@ -2033,7 +2031,7 @@ class Database(ApiGroup):
         :type count: int
         :return: List of job IDs.
         :rtype: [str]
-        :raise arango.exceptions.AsyncJobListError: If retrieval fails.
+        :raise aioarango.exceptions.AsyncJobListError: If retrieval fails.
         """
         params: Params = {}
         if count is not None:
@@ -2047,9 +2045,9 @@ class Database(ApiGroup):
                 return result
             raise AsyncJobListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def clear_async_jobs(self, threshold: Optional[int] = None) -> Result[bool]:
+    async def clear_async_jobs(self, threshold: Optional[int] = None) -> Result[bool]:
         """Clear async job results from the server.
 
         Async jobs that are still queued or running are not stopped.
@@ -2060,7 +2058,7 @@ class Database(ApiGroup):
         :type threshold: int | None
         :return: True if job results were cleared successfully.
         :rtype: bool
-        :raise arango.exceptions.AsyncJobClearError: If operation fails.
+        :raise aioarango.exceptions.AsyncJobClearError: If operation fails.
         """
         if threshold is None:
             request = Request(method="delete", endpoint="/_api/job/all")
@@ -2076,18 +2074,18 @@ class Database(ApiGroup):
                 return True
             raise AsyncJobClearError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ###################
     # View Management #
     ###################
 
-    def views(self) -> Result[Jsons]:
+    async def views(self) -> Result[Jsons]:
         """Return list of views and their summaries.
 
         :return: List of views.
         :rtype: [dict]
-        :raise arango.exceptions.ViewListError: If retrieval fails.
+        :raise aioarango.exceptions.ViewListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/view")
 
@@ -2096,14 +2094,14 @@ class Database(ApiGroup):
                 return [format_view(view) for view in resp.body["result"]]
             raise ViewListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def view(self, name: str) -> Result[Json]:
+    async def view(self, name: str) -> Result[Json]:
         """Return view details.
 
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewGetError: If retrieval fails.
+        :raise aioarango.exceptions.ViewGetError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/view/{name}/properties")
 
@@ -2112,9 +2110,9 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_view(
+    async def create_view(
         self, name: str, view_type: str, properties: Optional[Json] = None
     ) -> Result[Json]:
         """Create a view.
@@ -2128,7 +2126,7 @@ class Database(ApiGroup):
         :type properties: dict
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewCreateError: If create fails.
+        :raise aioarango.exceptions.ViewCreateError: If create fails.
         """
         data: Json = {"name": name, "type": view_type}
 
@@ -2142,9 +2140,9 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_view(self, name: str, properties: Json) -> Result[Json]:
+    async def update_view(self, name: str, properties: Json) -> Result[Json]:
         """Update a view.
 
         :param name: View name.
@@ -2154,7 +2152,7 @@ class Database(ApiGroup):
         :type properties: dict
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewUpdateError: If update fails.
+        :raise aioarango.exceptions.ViewUpdateError: If update fails.
         """
         request = Request(
             method="patch",
@@ -2167,9 +2165,9 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_view(self, name: str, properties: Json) -> Result[Json]:
+    async def replace_view(self, name: str, properties: Json) -> Result[Json]:
         """Replace a view.
 
         :param name: View name.
@@ -2179,7 +2177,7 @@ class Database(ApiGroup):
         :type properties: dict
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewReplaceError: If replace fails.
+        :raise aioarango.exceptions.ViewReplaceError: If replace fails.
         """
         request = Request(
             method="put",
@@ -2192,9 +2190,9 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_view(self, name: str, ignore_missing: bool = False) -> Result[bool]:
+    async def delete_view(self, name: str, ignore_missing: bool = False) -> Result[bool]:
         """Delete a view.
 
         :param name: View name.
@@ -2204,7 +2202,7 @@ class Database(ApiGroup):
         :return: True if view was deleted successfully, False if view was not
             found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.ViewDeleteError: If delete fails.
+        :raise aioarango.exceptions.ViewDeleteError: If delete fails.
         """
         request = Request(method="delete", endpoint=f"/_api/view/{name}")
 
@@ -2215,9 +2213,9 @@ class Database(ApiGroup):
                 return True
             raise ViewDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def rename_view(self, name: str, new_name: str) -> Result[bool]:
+    async def rename_view(self, name: str, new_name: str) -> Result[bool]:
         """Rename a view.
 
         :param name: View name.
@@ -2226,7 +2224,7 @@ class Database(ApiGroup):
         :type new_name: str
         :return: True if view was renamed successfully.
         :rtype: bool
-        :raise arango.exceptions.ViewRenameError: If delete fails.
+        :raise aioarango.exceptions.ViewRenameError: If delete fails.
         """
         request = Request(
             method="put",
@@ -2239,13 +2237,13 @@ class Database(ApiGroup):
                 return True
             raise ViewRenameError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     ################################
     # ArangoSearch View Management #
     ################################
 
-    def create_arangosearch_view(
+    async def create_arangosearch_view(
         self, name: str, properties: Optional[Json] = None
     ) -> Result[Json]:
         """Create an ArangoSearch view.
@@ -2257,7 +2255,7 @@ class Database(ApiGroup):
         :type properties: dict | None
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewCreateError: If create fails.
+        :raise aioarango.exceptions.ViewCreateError: If create fails.
         """
         data: Json = {"name": name, "type": "arangosearch"}
 
@@ -2271,9 +2269,9 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def update_arangosearch_view(self, name: str, properties: Json) -> Result[Json]:
+    async def update_arangosearch_view(self, name: str, properties: Json) -> Result[Json]:
         """Update an ArangoSearch view.
 
         :param name: View name.
@@ -2283,7 +2281,7 @@ class Database(ApiGroup):
         :type properties: dict
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewUpdateError: If update fails.
+        :raise aioarango.exceptions.ViewUpdateError: If update fails.
         """
         request = Request(
             method="patch",
@@ -2296,9 +2294,9 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewUpdateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def replace_arangosearch_view(self, name: str, properties: Json) -> Result[Json]:
+    async def replace_arangosearch_view(self, name: str, properties: Json) -> Result[Json]:
         """Replace an ArangoSearch view.
 
         :param name: View name.
@@ -2308,7 +2306,7 @@ class Database(ApiGroup):
         :type properties: dict
         :return: View details.
         :rtype: dict
-        :raise arango.exceptions.ViewReplaceError: If replace fails.
+        :raise aioarango.exceptions.ViewReplaceError: If replace fails.
         """
         request = Request(
             method="put",
@@ -2321,18 +2319,18 @@ class Database(ApiGroup):
                 return format_view(resp.body)
             raise ViewReplaceError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
     #######################
     # Analyzer Management #
     #######################
 
-    def analyzers(self) -> Result[Jsons]:
+    async def analyzers(self) -> Result[Jsons]:
         """Return list of analyzers.
 
         :return: List of analyzers.
         :rtype: [dict]
-        :raise arango.exceptions.AnalyzerListError: If retrieval fails.
+        :raise aioarango.exceptions.AnalyzerListError: If retrieval fails.
         """
         request = Request(method="get", endpoint="/_api/analyzer")
 
@@ -2342,16 +2340,16 @@ class Database(ApiGroup):
                 return result
             raise AnalyzerListError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def analyzer(self, name: str) -> Result[Json]:
+    async def analyzer(self, name: str) -> Result[Json]:
         """Return analyzer details.
 
         :param name: Analyzer name.
         :type name: str
         :return: Analyzer details.
         :rtype: dict
-        :raise arango.exceptions.AnalyzerGetError: If retrieval fails.
+        :raise aioarango.exceptions.AnalyzerGetError: If retrieval fails.
         """
         request = Request(method="get", endpoint=f"/_api/analyzer/{name}")
 
@@ -2360,9 +2358,9 @@ class Database(ApiGroup):
                 return format_body(resp.body)
             raise AnalyzerGetError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def create_analyzer(
+    async def create_analyzer(
         self,
         name: str,
         analyzer_type: str,
@@ -2381,7 +2379,7 @@ class Database(ApiGroup):
         :type features: list | None
         :return: Analyzer details.
         :rtype: dict
-        :raise arango.exceptions.AnalyzerCreateError: If create fails.
+        :raise aioarango.exceptions.AnalyzerCreateError: If create fails.
         """
         data: Json = {"name": name, "type": analyzer_type}
 
@@ -2399,9 +2397,9 @@ class Database(ApiGroup):
                 return result
             raise AnalyzerCreateError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
-    def delete_analyzer(
+    async def delete_analyzer(
         self, name: str, force: bool = False, ignore_missing: bool = False
     ) -> Result[bool]:
         """Delete an analyzer.
@@ -2415,7 +2413,7 @@ class Database(ApiGroup):
         :return: True if analyzer was deleted successfully, False if analyzer
             was not found and **ignore_missing** was set to True.
         :rtype: bool
-        :raise arango.exceptions.AnalyzerDeleteError: If delete fails.
+        :raise aioarango.exceptions.AnalyzerDeleteError: If delete fails.
         """
         request = Request(
             method="delete",
@@ -2430,7 +2428,7 @@ class Database(ApiGroup):
                 return True
             raise AnalyzerDeleteError(resp, request)
 
-        return self._execute(request, response_handler)
+        return await self._execute(request, response_handler)
 
 
 class StandardDatabase(Database):
@@ -2446,12 +2444,12 @@ class StandardDatabase(Database):
         """Begin async execution.
 
         :param return_result: If set to True, API executions return instances
-            of :class:`arango.job.AsyncJob`, which you can use to retrieve
+            of :class:`aioarango.job.AsyncJob`, which you can use to retrieve
             results from server once available. If set to False, API executions
             return None and no results are stored on server.
         :type return_result: bool
         :return: Database API wrapper object specifically for async execution.
-        :rtype: arango.database.AsyncDatabase
+        :rtype: aioarango.database.AsyncDatabase
         """
         return AsyncDatabase(self._conn, return_result)
 
@@ -2459,16 +2457,16 @@ class StandardDatabase(Database):
         """Begin batch execution.
 
         :param return_result: If set to True, API executions return instances
-            of :class:`arango.job.BatchJob` that are populated with results on
+            of :class:`aioarango.job.BatchJob` that are populated with results on
             commit. If set to False, API executions return None and no results
             are tracked client-side.
         :type return_result: bool
         :return: Database API wrapper object specifically for batch execution.
-        :rtype: arango.database.BatchDatabase
+        :rtype: aioarango.database.BatchDatabase
         """
         return BatchDatabase(self._conn, return_result)
 
-    def begin_transaction(
+    async def begin_transaction(
         self,
         read: Union[str, Sequence[str], None] = None,
         write: Union[str, Sequence[str], None] = None,
@@ -2501,10 +2499,10 @@ class StandardDatabase(Database):
         :param max_size: Max transaction size in bytes.
         :type max_size: int | None
         :return: Database API wrapper object specifically for transactions.
-        :rtype: arango.database.TransactionDatabase
+        :rtype: aioarango.database.TransactionDatabase
         """
-        return TransactionDatabase(
-            connection=self._conn,
+        tb = TransactionDatabase(connection=self._conn)
+        await tb.begin_transaction(
             read=read,
             write=write,
             exclusive=exclusive,
@@ -2513,16 +2511,17 @@ class StandardDatabase(Database):
             lock_timeout=lock_timeout,
             max_size=max_size,
         )
+        return tb
 
 
 class AsyncDatabase(Database):
     """Database API wrapper tailored specifically for async execution.
 
-    See :func:`arango.database.StandardDatabase.begin_async_execution`.
+    See :func:`aioarango.database.StandardDatabase.begin_async_execution`.
 
     :param connection: HTTP connection.
     :param return_result: If set to True, API executions return instances of
-        :class:`arango.job.AsyncJob`, which you can use to retrieve results
+        :class:`aioarango.job.AsyncJob`, which you can use to retrieve results
         from server once available. If set to False, API executions return None
         and no results are stored on server.
     :type return_result: bool
@@ -2541,11 +2540,11 @@ class AsyncDatabase(Database):
 class BatchDatabase(Database):
     """Database API wrapper tailored specifically for batch execution.
 
-    See :func:`arango.database.StandardDatabase.begin_batch_execution`.
+    See :func:`aioarango.database.StandardDatabase.begin_batch_execution`.
 
     :param connection: HTTP connection.
     :param return_result: If set to True, API executions return instances of
-        :class:`arango.job.BatchJob` that are populated with results on commit.
+        :class:`aioarango.job.BatchJob` that are populated with results on commit.
         If set to False, API executions return None and no results are tracked
         client-side.
     :type return_result: bool
@@ -2560,69 +2559,58 @@ class BatchDatabase(Database):
     def __repr__(self) -> str:
         return f"<BatchDatabase {self.name}>"
 
-    def __enter__(self) -> "BatchDatabase":
+    async def __aenter__(self) -> "BatchDatabase":
         return self
 
-    def __exit__(self, exception: Exception, *_: Any) -> None:
+    async def __aexit__(self, exception: Exception, *_: Any) -> None:
         if exception is None:
-            self._executor.commit()
+            await self._executor.commit()
 
     def queued_jobs(self) -> Optional[Sequence[BatchJob[Any]]]:
         """Return the queued batch jobs.
 
         :return: Queued batch jobs or None if **return_result** parameter was
             set to False during initialization.
-        :rtype: [arango.job.BatchJob] | None
+        :rtype: [aioarango.job.BatchJob] | None
         """
         return self._executor.jobs
 
-    def commit(self) -> Optional[Sequence[BatchJob[Any]]]:
+    async def commit(self) -> Optional[Sequence[BatchJob[Any]]]:
         """Execute the queued requests in a single batch API request.
 
         If **return_result** parameter was set to True during initialization,
-        :class:`arango.job.BatchJob` instances are populated with results.
+        :class:`aioarango.job.BatchJob` instances are populated with results.
 
         :return: Batch jobs, or None if **return_result** parameter was set to
             False during initialization.
-        :rtype: [arango.job.BatchJob] | None
-        :raise arango.exceptions.BatchStateError: If batch state is invalid
+        :rtype: [aioarango.job.BatchJob] | None
+        :raise aioarango.exceptions.BatchStateError: If batch state is invalid
             (e.g. batch was already committed or the response size did not
             match expected).
-        :raise arango.exceptions.BatchExecuteError: If commit fails.
+        :raise aioarango.exceptions.BatchExecuteError: If commit fails.
         """
-        return self._executor.commit()
+        return await self._executor.commit()
 
 
 class TransactionDatabase(Database):
     """Database API wrapper tailored specifically for transactions.
 
-    See :func:`arango.database.StandardDatabase.begin_transaction`.
+    See :func:`aioarango.database.StandardDatabase.begin_transaction`.
 
     :param connection: HTTP connection.
-    :param read: Name(s) of collections read during transaction. Read-only
-        collections are added lazily but should be declared if possible to
-        avoid deadlocks.
-    :type read: str | [str] | None
-    :param write: Name(s) of collections written to during transaction with
-        shared access.
-    :type write: str | [str] | None
-    :param exclusive: Name(s) of collections written to during transaction
-        with exclusive access.
-    :type exclusive: str | [str] | None
-    :param sync: Block until operation is synchronized to disk.
-    :type sync: bool | None
-    :param allow_implicit: Allow reading from undeclared collections.
-    :type allow_implicit: bool | None
-    :param lock_timeout: Timeout for waiting on collection locks. If not given,
-        a default value is used. Setting it to 0 disables the timeout.
-    :type lock_timeout: int | None
-    :param max_size: Max transaction size in bytes.
-    :type max_size: int | None
     """
 
-    def __init__(
+    def __init__(self, connection: Connection) -> None:
+        self._executor: TransactionApiExecutor
+        super().__init__(
+            connection=connection,
+            executor=TransactionApiExecutor(
+                connection=connection,
+            ),
+        )
+
+    async def begin_transaction(
         self,
-        connection: Connection,
         read: Union[str, Sequence[str], None] = None,
         write: Union[str, Sequence[str], None] = None,
         exclusive: Union[str, Sequence[str], None] = None,
@@ -2630,20 +2618,37 @@ class TransactionDatabase(Database):
         allow_implicit: Optional[bool] = None,
         lock_timeout: Optional[int] = None,
         max_size: Optional[int] = None,
-    ) -> None:
-        self._executor: TransactionApiExecutor
-        super().__init__(
-            connection=connection,
-            executor=TransactionApiExecutor(
-                connection=connection,
-                read=read,
-                write=write,
-                exclusive=exclusive,
-                sync=sync,
-                allow_implicit=allow_implicit,
-                lock_timeout=lock_timeout,
-                max_size=max_size,
-            ),
+    ):
+        """Begin the transaction.
+
+        :param read: Name(s) of collections read during transaction. Read-only
+            collections are added lazily but should be declared if possible to
+            avoid deadlocks.
+        :type read: str | [str] | None
+        :param write: Name(s) of collections written to during transaction with
+            shared access.
+        :type write: str | [str] | None
+        :param exclusive: Name(s) of collections written to during transaction
+            with exclusive access.
+        :type exclusive: str | [str] | None
+        :param sync: Block until operation is synchronized to disk.
+        :type sync: bool | None
+        :param allow_implicit: Allow reading from undeclared collections.
+        :type allow_implicit: bool | None
+        :param lock_timeout: Timeout for waiting on collection locks. If not given,
+            a default value is used. Setting it to 0 disables the timeout.
+        :type lock_timeout: int | None
+        :param max_size: Max transaction size in bytes.
+        :type max_size: int | None
+        """
+        return await self._executor.begin(
+            read=read,
+            write=write,
+            exclusive=exclusive,
+            sync=sync,
+            allow_implicit=allow_implicit,
+            lock_timeout=lock_timeout,
+            max_size=max_size,
         )
 
     def __repr__(self) -> str:
@@ -2658,29 +2663,29 @@ class TransactionDatabase(Database):
         """
         return self._executor.id
 
-    def transaction_status(self) -> str:
+    async def transaction_status(self) -> str:
         """Return the transaction status.
 
         :return: Transaction status.
         :rtype: str
-        :raise arango.exceptions.TransactionStatusError: If retrieval fails.
+        :raise aioarango.exceptions.TransactionStatusError: If retrieval fails.
         """
-        return self._executor.status()
+        return await self._executor.status()
 
-    def commit_transaction(self) -> bool:
+    async def commit_transaction(self) -> bool:
         """Commit the transaction.
 
         :return: True if commit was successful.
         :rtype: bool
-        :raise arango.exceptions.TransactionCommitError: If commit fails.
+        :raise aioarango.exceptions.TransactionCommitError: If commit fails.
         """
-        return self._executor.commit()
+        return await self._executor.commit()
 
-    def abort_transaction(self) -> bool:
+    async def abort_transaction(self) -> bool:
         """Abort the transaction.
 
         :return: True if the abort operation was successful.
         :rtype: bool
-        :raise arango.exceptions.TransactionAbortError: If abort fails.
+        :raise aioarango.exceptions.TransactionAbortError: If abort fails.
         """
-        return self._executor.abort()
+        return await self._executor.abort()

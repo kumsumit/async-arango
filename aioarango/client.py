@@ -1,20 +1,18 @@
-__all__ = ["ArangoClient"]
-
 from json import dumps, loads
 from typing import Any, Callable, Optional, Sequence, Union
 
 from pkg_resources import get_distribution
 
-from arango.connection import (
+from aioarango.connection import (
     BasicConnection,
     Connection,
     JwtConnection,
     JwtSuperuserConnection,
 )
-from arango.database import StandardDatabase
-from arango.exceptions import ServerConnectionError
-from arango.http import DefaultHTTPClient, HTTPClient
-from arango.resolver import (
+from aioarango.database import StandardDatabase
+from aioarango.exceptions import ServerConnectionError
+from aioarango.http import DefaultHTTPClient, HTTPClient
+from aioarango.resolver import (
     HostResolver,
     RandomHostResolver,
     RoundRobinHostResolver,
@@ -36,7 +34,7 @@ class ArangoClient:
         number of hosts.
     :type resolver_max_tries: int
     :param http_client: User-defined HTTP client.
-    :type http_client: arango.http.HTTPClient
+    :type http_client: aioarango.http.HTTPClient
     :param serializer: User-defined JSON serializer. Must be a callable
         which takes a JSON data type object as its only argument and return
         the serialized string. If not given, ``json.dumps`` is used by default.
@@ -106,10 +104,9 @@ class ArangoClient:
     def __repr__(self) -> str:
         return f"<ArangoClient {','.join(self._hosts)}>"
 
-    def close(self) -> None:  # pragma: no cover
-        """Close HTTP sessions."""
+    async def close(self):
         for session in self._sessions:
-            session.close()
+            await session.aclose()
 
     @property
     def hosts(self) -> Sequence[str]:
@@ -121,13 +118,13 @@ class ArangoClient:
         return self._hosts
 
     @property
-    def version(self) -> str:
+    def version(self):
         """Return the client version.
 
         :return: Client version.
         :rtype: str
         """
-        version: str = get_distribution("python-arango").version
+        version: str = get_distribution("aioarango").version
         return version
 
     @property
@@ -144,7 +141,7 @@ class ArangoClient:
     def request_timeout(self, value: Any) -> None:
         self._http.REQUEST_TIMEOUT = value  # type: ignore
 
-    def db(
+    async def db(
         self,
         name: str = "_system",
         username: str = "root",
@@ -176,8 +173,8 @@ class ArangoClient:
         :param verify_certificate: Verify TLS certificates.
         :type verify_certificate: bool
         :return: Standard database API wrapper.
-        :rtype: arango.database.StandardDatabase
-        :raise arango.exceptions.ServerConnectionError: If **verify** was set
+        :rtype: aioarango.database.StandardDatabase
+        :raise aioarango.exceptions.ServerConnectionError: If **verify** was set
             to True and the connection fails.
         """
         connection: Connection
@@ -217,12 +214,13 @@ class ArangoClient:
                 serializer=self._serializer,
                 deserializer=self._deserializer,
             )
+            await connection.refresh_token()
         else:
             raise ValueError(f"invalid auth_method: {auth_method}")
 
         if verify:
             try:
-                connection.ping()
+                await connection.ping()
             except ServerConnectionError as err:
                 raise err
             except Exception as err:
