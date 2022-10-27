@@ -1,17 +1,9 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "setuptools_scm[toml]>=6.2",
-    "wheel",
-]
+requires = ["setuptools>=42", "setuptools_scm[toml]>=6.2", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.coverage.run]
-omit = [
-    "arango/version.py",
-    "arango/formatter.py",
-    "setup.py",
-]
+omit = ["arango/version.py", "arango/formatter.py", "setup.py"]
 
 [tool.isort]
 profile = "black"
@@ -29,3 +21,12 @@ strict = true
 
 [tool.setuptools_scm]
 write_to = "arango/version.py"
+
+[tool.poetry]
+name = "async-arango"
+version = "0.1.0"
+description = ""
+authors = ["sumitsharansatsangi <sharansumitkumar@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
