@@ -15,8 +15,7 @@ class HTTPClient(ABC):  # pragma: no cover
         """Return a new requests session given the host URL.
 
         This method must be overridden by the user.
-
-        :param host: ArangoDB host URL.
+        param host: ArangoDB host URL.
         :type host: str
         :returns: httpx client object.
         :rtype: httpx.AsyncClient
@@ -25,20 +24,20 @@ class HTTPClient(ABC):  # pragma: no cover
 
     @abstractmethod
     async def send_request(
-        self,
-        session: httpx.AsyncClient,
-        method: str,
-        url: str,
-        headers: Optional[Headers] = None,
-        params: Optional[MutableMapping[str, str]] = None,
-        data: Optional[str] = None,
-        auth: Optional[Tuple[str, str]] = None,
+            self,
+            session: httpx.AsyncClient,
+            method: str,
+            url: str,
+            headers: Optional[Headers] = None,
+            params: Optional[MutableMapping[str, str]] = None,
+            data: Optional[str] = None,
+            auth: Optional[Tuple[str, str]] = None,
     ) -> Response:
         """Send an HTTP request.
 
         This method must be overridden by the user.
 
-        :param session: httpx session object.
+        param session: httpx session object.
         :type session: httpx.AsyncClient
         :param method: HTTP method in lowercase (e.g. "post").
         :type method: str
@@ -64,26 +63,28 @@ class DefaultHTTPClient(HTTPClient):
     REQUEST_TIMEOUT = 60
     RETRY_ATTEMPTS = 3
 
-    def create_session(self, host: str) -> httpx.AsyncClient:
+    def create_session(self, host: str, verify: bool = True) -> httpx.AsyncClient:
         """Create and return a new session/connection.
 
         :param host: ArangoDB host URL.
-        :type host: str | unicode
+        :param verify: Verify SSL connection.
         :returns: httpx client object
         :rtype: httpx.AsyncClient
+        :type host: str | unicode
+        :type verify: bool
         """
-        transport = httpx.AsyncHTTPTransport(retries=self.RETRY_ATTEMPTS)
+        transport = httpx.AsyncHTTPTransport(retries=self.RETRY_ATTEMPTS, verify=verify)
         return httpx.AsyncClient(transport=transport)
 
     async def send_request(
-        self,
-        session: httpx.AsyncClient,
-        method: str,
-        url: str,
-        headers: Optional[Headers] = None,
-        params: Optional[MutableMapping[str, str]] = None,
-        data: Optional[str] = None,
-        auth: Optional[Tuple[str, str]] = None,
+            self,
+            session: httpx.AsyncClient,
+            method: str,
+            url: str,
+            headers: Optional[Headers] = None,
+            params: Optional[MutableMapping[str, str]] = None,
+            data: Optional[str] = None,
+            auth: Optional[Tuple[str, str]] = None,
     ) -> Response:
         """Send an HTTP request.
 
