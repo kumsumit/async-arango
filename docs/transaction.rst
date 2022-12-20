@@ -110,6 +110,12 @@ Javascript code in a transaction.
         write='students'  # Specify the collections written.
     )
     assert result is True
+<<<<<<< HEAD
     assert await col.has('Lucy')
     assert await col.has('Greg')
     assert await col.has('Dona')
+=======
+    assert 'Lucy' in students
+    assert 'Greg' in students
+    assert 'Dona' not in students
+>>>>>>> origin/updated

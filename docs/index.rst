@@ -56,6 +56,7 @@ Contents
     view
     analyzer
     threading
+    certificates
     errors
     auth
     http

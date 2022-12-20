@@ -11,12 +11,21 @@ on:
         description: Run the build with tmate debugging
         required: false
         default: false
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/updated
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/updated
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -52,12 +61,24 @@ jobs:
 
       - name: Install package
         run: pip install .[dev]
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/updated
       - name: Run unit tests
         run: py.test --complete --cov=arango --cov-report=xml
+
       - name: Run Sphinx doctest
         run: python -m sphinx -b doctest docs docs/_build
+<<<<<<< HEAD
       - name: Generate Sphinx HTML
         run: python -m sphinx -b html -W docs docs/_build
+=======
+
+      - name: Generate Sphinx HTML
+        run: python -m sphinx -b html -W docs docs/_build
+
+>>>>>>> origin/updated
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         if: matrix.python-version == '3.8'
