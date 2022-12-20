@@ -64,7 +64,7 @@ class Collection(ApiGroup):
     }
 
     def __init__(
-        self, connection: Connection, executor: ApiExecutor, name: str
+            self, connection: Connection, executor: ApiExecutor, name: str
     ) -> None:
         super().__init__(connection, executor)
         self._name = name
@@ -136,7 +136,7 @@ class Collection(ApiGroup):
         return doc_id, {"If-Match": document["_rev"]}
 
     def _prep_from_doc(
-        self, document: Union[str, Json], rev: Optional[str], check_rev: bool
+            self, document: Union[str, Json], rev: Optional[str], check_rev: bool
     ) -> Tuple[str, Union[str, Json], Json]:
         """Prepare document ID, body and request headers.
 
@@ -182,7 +182,7 @@ class Collection(ApiGroup):
         elif "_id" in body:
             doc_id = self._validate_id(body["_id"])
             body = body.copy()
-            body["_key"] = doc_id[len(self._id_prefix) :]
+            body["_key"] = doc_id[len(self._id_prefix):]
             return body
         raise DocumentParseError('field "_key" or "_id" required')
 
@@ -197,7 +197,7 @@ class Collection(ApiGroup):
         if "_id" in body and "_key" not in body:
             doc_id = self._validate_id(body["_id"])
             body = body.copy()
-            body["_key"] = doc_id[len(self._id_prefix) :]
+            body["_key"] = doc_id[len(self._id_prefix):]
         return body
 
     @property
@@ -300,9 +300,9 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def configure(
-        self, sync: Optional[bool] = None, schema: Optional[Json] = None,
-        replication_factor: Optional[int] = None,
-        write_concern: Optional[int] = None,
+            self, sync: Optional[bool] = None, schema: Optional[Json] = None,
+            replication_factor: Optional[int] = None,
+            write_concern: Optional[int] = None,
     ) -> Result[Json]:
         """Configure collection properties.
 
@@ -504,11 +504,11 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def has(
-        self,
-        document: Union[str, Json],
-        rev: Optional[str] = None,
-        check_rev: bool = True,
-        allow_dirty_read: bool = False,
+            self,
+            document: Union[str, Json],
+            rev: Optional[str] = None,
+            check_rev: bool = True,
+            allow_dirty_read: bool = False,
     ) -> Result[bool]:
         """Check if a document exists in the collection.
 
@@ -594,7 +594,7 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def all(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
+            self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> Result[Cursor]:
         """Return all documents in the collection.
 
@@ -627,15 +627,15 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def export(
-        self,
-        limit: Optional[int] = None,
-        count: bool = False,
-        batch_size: Optional[int] = None,
-        flush: bool = False,
-        flush_wait: Optional[int] = None,
-        ttl: Optional[Number] = None,
-        filter_fields: Optional[Sequence[str]] = None,
-        filter_type: str = "include",
+            self,
+            limit: Optional[int] = None,
+            count: bool = False,
+            batch_size: Optional[int] = None,
+            flush: bool = False,
+            flush_wait: Optional[int] = None,
+            ttl: Optional[Number] = None,
+            filter_fields: Optional[Sequence[str]] = None,
+            filter_type: str = "include",
     ) -> Result[Cursor]:
         """Export all documents in the collection using a server cursor.
 
@@ -688,7 +688,7 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def find(
-        self, filters: Json, skip: Optional[int] = None, limit: Optional[int] = None
+            self, filters: Json, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> Result[Cursor]:
         """Return all documents that match the given filters.
 
@@ -726,7 +726,7 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def find_near(
-        self, latitude: Number, longitude: Number, limit: Optional[int] = None, allow_dirty_read: bool = False,
+            self, latitude: Number, longitude: Number, limit: Optional[int] = None, allow_dirty_read: bool = False,
     ) -> Result[Cursor]:
         """Return documents near a given coordinate.
 
@@ -782,13 +782,13 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def find_in_range(
-        self,
-        field: str,
-        lower: int,
-        upper: int,
-        skip: Optional[int] = None,
-        limit: Optional[int] = None,
-        allow_dirty_read: bool = False,
+            self,
+            field: str,
+            lower: int,
+            upper: int,
+            skip: Optional[int] = None,
+            limit: Optional[int] = None,
+            allow_dirty_read: bool = False,
     ) -> Result[Cursor]:
         """Return documents within a given range in a random order.
 
@@ -845,12 +845,12 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def find_in_radius(
-        self,
-        latitude: Number,
-        longitude: Number,
-        radius: Number,
-        distance_field: Optional[str] = None,
-        allow_dirty_read: bool = False,
+            self,
+            latitude: Number,
+            longitude: Number,
+            radius: Number,
+            distance_field: Optional[str] = None,
+            allow_dirty_read: bool = False,
     ) -> Result[Cursor]:
         """Return documents within a given radius around a coordinate.
 
@@ -908,14 +908,14 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def find_in_box(
-        self,
-        latitude1: Number,
-        longitude1: Number,
-        latitude2: Number,
-        longitude2: Number,
-        skip: Optional[int] = None,
-        limit: Optional[int] = None,
-        index: Optional[str] = None,
+            self,
+            latitude1: Number,
+            longitude1: Number,
+            latitude2: Number,
+            longitude2: Number,
+            skip: Optional[int] = None,
+            limit: Optional[int] = None,
+            index: Optional[str] = None,
     ) -> Result[Cursor]:
         """Return all documents in an rectangular area.
 
@@ -974,7 +974,7 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def find_by_text(
-        self, field: str, query: str, limit: Optional[int] = None,  allow_dirty_read: bool = False,
+            self, field: str, query: str, limit: Optional[int] = None, allow_dirty_read: bool = False,
     ) -> Result[Cursor]:
         """Return documents that match the given fulltext query.
 
@@ -1022,7 +1022,8 @@ class Collection(ApiGroup):
 
         return await self._execute(request, response_handler)
 
-    async def get_many(self, documents: Sequence[Union[str, Json]], allow_dirty_read: bool = False,) -> Result[List[Json]]:
+    async def get_many(self, documents: Sequence[Union[str, Json]], allow_dirty_read: bool = False, ) -> Result[
+        List[Json]]:
         """Return multiple documents ignoring any missing ones.
 
         :param documents: List of document keys, IDs or bodies. Document bodies
@@ -1125,13 +1126,13 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def add_hash_index(
-        self,
-        fields: Sequence[str],
-        unique: Optional[bool] = None,
-        sparse: Optional[bool] = None,
-        deduplicate: Optional[bool] = None,
-        name: Optional[str] = None,
-        in_background: Optional[bool] = None,
+            self,
+            fields: Sequence[str],
+            unique: Optional[bool] = None,
+            sparse: Optional[bool] = None,
+            deduplicate: Optional[bool] = None,
+            name: Optional[str] = None,
+            in_background: Optional[bool] = None,
     ) -> Result[Json]:
         """Create a new hash index.
 
@@ -1169,13 +1170,13 @@ class Collection(ApiGroup):
         return await self._add_index(data)
 
     async def add_skiplist_index(
-        self,
-        fields: Sequence[str],
-        unique: Optional[bool] = None,
-        sparse: Optional[bool] = None,
-        deduplicate: Optional[bool] = None,
-        name: Optional[str] = None,
-        in_background: Optional[bool] = None,
+            self,
+            fields: Sequence[str],
+            unique: Optional[bool] = None,
+            sparse: Optional[bool] = None,
+            deduplicate: Optional[bool] = None,
+            name: Optional[str] = None,
+            in_background: Optional[bool] = None,
     ) -> Result[Json]:
         """Create a new skiplist index.
 
@@ -1213,12 +1214,12 @@ class Collection(ApiGroup):
         return await self._add_index(data)
 
     async def add_geo_index(
-        self,
-        fields: Fields,
-        ordered: Optional[bool] = None,
-        name: Optional[str] = None,
-        in_background: Optional[bool] = None,
-        legacyPolygons: Optional[bool] = False,
+            self,
+            fields: Fields,
+            ordered: Optional[bool] = None,
+            name: Optional[str] = None,
+            in_background: Optional[bool] = None,
+            legacyPolygons: Optional[bool] = False,
     ) -> Result[Json]:
         """Create a new geo-spatial index.
 
@@ -1254,11 +1255,11 @@ class Collection(ApiGroup):
         return await self._add_index(data)
 
     async def add_fulltext_index(
-        self,
-        fields: Sequence[str],
-        min_length: Optional[int] = None,
-        name: Optional[str] = None,
-        in_background: Optional[bool] = None,
+            self,
+            fields: Sequence[str],
+            min_length: Optional[int] = None,
+            name: Optional[str] = None,
+            in_background: Optional[bool] = None,
     ) -> Result[Json]:
         """Create a new fulltext index. This method is deprecated
             in ArangoDB 3.10 and will be removed in a future version
@@ -1288,14 +1289,14 @@ class Collection(ApiGroup):
         return await self._add_index(data)
 
     async def add_persistent_index(
-        self,
-        fields: Sequence[str],
-        unique: Optional[bool] = None,
-        sparse: Optional[bool] = None,
-        name: Optional[str] = None,
-        in_background: Optional[bool] = None,
-        storedValues: Optional[Sequence[str]] = None,
-        cacheEnabled: Optional[bool] = None,
+            self,
+            fields: Sequence[str],
+            unique: Optional[bool] = None,
+            sparse: Optional[bool] = None,
+            name: Optional[str] = None,
+            in_background: Optional[bool] = None,
+            storedValues: Optional[Sequence[str]] = None,
+            cacheEnabled: Optional[bool] = None,
     ) -> Result[Json]:
         """Create a new persistent index.
 
@@ -1346,11 +1347,11 @@ class Collection(ApiGroup):
         return await self._add_index(data)
 
     async def add_ttl_index(
-        self,
-        fields: Sequence[str],
-        expiry_time: int,
-        name: Optional[str] = None,
-        in_background: Optional[bool] = None,
+            self,
+            fields: Sequence[str],
+            expiry_time: int,
+            name: Optional[str] = None,
+            in_background: Optional[bool] = None,
     ) -> Result[Json]:
         """Create a new TTL (time-to-live) index.
 
@@ -1376,18 +1377,18 @@ class Collection(ApiGroup):
         return await self._add_index(data)
 
     async def add_inverted_index(
-        self,
-        fields: Json,
-        name: Optional[str] = None,
-        inBackground: Optional[bool] = None,
-        parallelism: Optional[int] = None,
-        primarySort: Optional[Json] = None,
-        storedValues: Optional[Sequence[Json]] = None,
-        analyzer: Optional[str] = None,
-        features: Optional[Sequence[str]] = None,
-        includeAllFields: Optional[bool] = None,
-        trackListPositions: Optional[bool] = None,
-        searchField: Optional[bool] = None,
+            self,
+            fields: Json,
+            name: Optional[str] = None,
+            inBackground: Optional[bool] = None,
+            parallelism: Optional[int] = None,
+            primarySort: Optional[Json] = None,
+            storedValues: Optional[Sequence[Json]] = None,
+            analyzer: Optional[str] = None,
+            features: Optional[Sequence[str]] = None,
+            includeAllFields: Optional[bool] = None,
+            trackListPositions: Optional[bool] = None,
+            searchField: Optional[bool] = None,
     ) -> Result[Json]:
         """Create a new inverted index, introduced in version 3.10.
 
@@ -1489,16 +1490,16 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def insert_many(
-        self,
-        documents: Sequence[Json],
-        return_new: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        overwrite: bool = False,
-        return_old: bool = False,
-        overwrite_mode: Optional[str] = None,
-        keep_none: Optional[bool] = None,
-        merge: Optional[bool] = None,
+            self,
+            documents: Sequence[Json],
+            return_new: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            overwrite: bool = False,
+            return_old: bool = False,
+            overwrite_mode: Optional[str] = None,
+            keep_none: Optional[bool] = None,
+            merge: Optional[bool] = None,
     ) -> Result[Union[bool, List[Union[Json, ArangoServerError]]]]:
         """Insert multiple documents.
 
@@ -1582,7 +1583,7 @@ class Collection(ApiGroup):
         )
 
         def response_handler(
-            resp: Response,
+                resp: Response,
         ) -> Union[bool, List[Union[Json, ArangoServerError]]]:
             if not resp.is_success:
                 raise DocumentInsertError(resp, request)
@@ -1604,15 +1605,15 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def update_many(
-        self,
-        documents: Sequence[Json],
-        check_rev: bool = True,
-        merge: bool = True,
-        keep_none: bool = True,
-        return_new: bool = False,
-        return_old: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
+            self,
+            documents: Sequence[Json],
+            check_rev: bool = True,
+            merge: bool = True,
+            keep_none: bool = True,
+            return_new: bool = False,
+            return_old: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
     ) -> Result[Union[bool, List[Union[Json, ArangoServerError]]]]:
         """Update multiple documents.
 
@@ -1683,7 +1684,7 @@ class Collection(ApiGroup):
         )
 
         def response_handler(
-            resp: Response,
+                resp: Response,
         ) -> Union[bool, List[Union[Json, ArangoServerError]]]:
             if not resp.is_success:
                 raise DocumentUpdateError(resp, request)
@@ -1711,13 +1712,13 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def update_match(
-        self,
-        filters: Json,
-        body: Json,
-        limit: Optional[int] = None,
-        keep_none: bool = True,
-        sync: Optional[bool] = None,
-        merge: bool = True,
+            self,
+            filters: Json,
+            body: Json,
+            limit: Optional[int] = None,
+            keep_none: bool = True,
+            sync: Optional[bool] = None,
+            merge: bool = True,
     ) -> Result[int]:
         """Update matching documents.
 
@@ -1777,13 +1778,13 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def replace_many(
-        self,
-        documents: Sequence[Json],
-        check_rev: bool = True,
-        return_new: bool = False,
-        return_old: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
+            self,
+            documents: Sequence[Json],
+            check_rev: bool = True,
+            return_new: bool = False,
+            return_old: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
     ) -> Result[Union[bool, List[Union[Json, ArangoServerError]]]]:
         """Replace multiple documents.
 
@@ -1847,7 +1848,7 @@ class Collection(ApiGroup):
         )
 
         def response_handler(
-            resp: Response,
+                resp: Response,
         ) -> Union[bool, List[Union[Json, ArangoServerError]]]:
             if not resp.is_success:
                 raise DocumentReplaceError(resp, request)
@@ -1875,11 +1876,11 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def replace_match(
-        self,
-        filters: Json,
-        body: Json,
-        limit: Optional[int] = None,
-        sync: Optional[bool] = None,
+            self,
+            filters: Json,
+            body: Json,
+            limit: Optional[int] = None,
+            sync: Optional[bool] = None,
     ) -> Result[int]:
         """Replace matching documents.
 
@@ -1926,12 +1927,12 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def delete_many(
-        self,
-        documents: Sequence[Json],
-        return_old: bool = False,
-        check_rev: bool = True,
-        sync: Optional[bool] = None,
-        silent: bool = False,
+            self,
+            documents: Sequence[Json],
+            return_old: bool = False,
+            check_rev: bool = True,
+            sync: Optional[bool] = None,
+            silent: bool = False,
     ) -> Result[Union[bool, List[Union[Json, ArangoServerError]]]]:
         """Delete multiple documents.
 
@@ -1992,7 +1993,7 @@ class Collection(ApiGroup):
         )
 
         def response_handler(
-            resp: Response,
+                resp: Response,
         ) -> Union[bool, List[Union[Json, ArangoServerError]]]:
             if not resp.is_success:
                 raise DocumentDeleteError(resp, request)
@@ -2018,7 +2019,7 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def delete_match(
-        self, filters: Json, limit: Optional[int] = None, sync: Optional[bool] = None
+            self, filters: Json, limit: Optional[int] = None, sync: Optional[bool] = None
     ) -> Result[int]:
         """Delete matching documents.
 
@@ -2063,16 +2064,16 @@ class Collection(ApiGroup):
         return await self._execute(request, response_handler)
 
     async def import_bulk(
-        self,
-        documents: Sequence[Json],
-        halt_on_error: bool = True,
-        details: bool = True,
-        from_prefix: Optional[str] = None,
-        to_prefix: Optional[str] = None,
-        overwrite: Optional[bool] = None,
-        on_duplicate: Optional[str] = None,
-        sync: Optional[bool] = None,
-        batch_size: Optional[int] = None,
+            self,
+            documents: Sequence[Json],
+            halt_on_error: bool = True,
+            details: bool = True,
+            from_prefix: Optional[str] = None,
+            to_prefix: Optional[str] = None,
+            overwrite: Optional[bool] = None,
+            on_duplicate: Optional[str] = None,
+            sync: Optional[bool] = None,
+            batch_size: Optional[int] = None,
     ) -> Union[Result[Json], List[Result[Json]]]:
         """Insert multiple documents into the collection.
 
@@ -2185,7 +2186,7 @@ class Collection(ApiGroup):
                     params=params,
                     write=self.name,
                 )
-                results.append( await self._execute(request, response_handler))
+                results.append(await self._execute(request, response_handler))
 
             return results
 
@@ -2200,11 +2201,11 @@ class StandardCollection(Collection):
     #     return self.get(key)
 
     async def get(
-        self,
-        document: Union[str, Json],
-        rev: Optional[str] = None,
-        check_rev: bool = True,
-        allow_dirty_read: bool = False,
+            self,
+            document: Union[str, Json],
+            rev: Optional[str] = None,
+            check_rev: bool = True,
+            allow_dirty_read: bool = False,
     ) -> Result[Optional[Json]]:
         """Return a document.
 
@@ -2250,16 +2251,16 @@ class StandardCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def insert(
-        self,
-        document: Json,
-        return_new: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        overwrite: bool = False,
-        return_old: bool = False,
-        overwrite_mode: Optional[str] = None,
-        keep_none: Optional[bool] = None,
-        merge: Optional[bool] = None,
+            self,
+            document: Json,
+            return_new: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            overwrite: bool = False,
+            return_old: bool = False,
+            overwrite_mode: Optional[str] = None,
+            keep_none: Optional[bool] = None,
+            merge: Optional[bool] = None,
     ) -> Result[Union[bool, Json]]:
         """Insert a new document.
 
@@ -2339,15 +2340,15 @@ class StandardCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def update(
-        self,
-        document: Json,
-        check_rev: bool = True,
-        merge: bool = True,
-        keep_none: bool = True,
-        return_new: bool = False,
-        return_old: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
+            self,
+            document: Json,
+            check_rev: bool = True,
+            merge: bool = True,
+            keep_none: bool = True,
+            return_new: bool = False,
+            return_old: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Update a document.
 
@@ -2415,13 +2416,13 @@ class StandardCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def replace(
-        self,
-        document: Json,
-        check_rev: bool = True,
-        return_new: bool = False,
-        return_old: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
+            self,
+            document: Json,
+            check_rev: bool = True,
+            return_new: bool = False,
+            return_old: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Replace a document.
 
@@ -2484,14 +2485,14 @@ class StandardCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def delete(
-        self,
-        document: Union[str, Json],
-        rev: Optional[str] = None,
-        check_rev: bool = True,
-        ignore_missing: bool = False,
-        return_old: bool = False,
-        sync: Optional[bool] = None,
-        silent: bool = False,
+            self,
+            document: Union[str, Json],
+            rev: Optional[str] = None,
+            check_rev: bool = True,
+            ignore_missing: bool = False,
+            return_old: bool = False,
+            sync: Optional[bool] = None,
+            silent: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Delete a document.
 
@@ -2565,7 +2566,7 @@ class VertexCollection(Collection):
     """
 
     def __init__(
-        self, connection: Connection, executor: ApiExecutor, graph: str, name: str
+            self, connection: Connection, executor: ApiExecutor, graph: str, name: str
     ) -> None:
         super().__init__(connection, executor, name)
         self._graph = graph
@@ -2583,10 +2584,10 @@ class VertexCollection(Collection):
         return self._graph
 
     async def get(
-        self,
-        vertex: Union[str, Json],
-        rev: Optional[str] = None,
-        check_rev: bool = True,
+            self,
+            vertex: Union[str, Json],
+            rev: Optional[str] = None,
+            check_rev: bool = True,
     ) -> Result[Optional[Json]]:
         """Return a vertex document.
 
@@ -2626,11 +2627,11 @@ class VertexCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def insert(
-        self,
-        vertex: Json,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_new: bool = False,
+            self,
+            vertex: Json,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Insert a new vertex document.
 
@@ -2675,14 +2676,14 @@ class VertexCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def update(
-        self,
-        vertex: Json,
-        check_rev: bool = True,
-        keep_none: bool = True,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_old: bool = False,
-        return_new: bool = False,
+            self,
+            vertex: Json,
+            check_rev: bool = True,
+            keep_none: bool = True,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_old: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Update a vertex document.
 
@@ -2745,13 +2746,13 @@ class VertexCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def replace(
-        self,
-        vertex: Json,
-        check_rev: bool = True,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_old: bool = False,
-        return_new: bool = False,
+            self,
+            vertex: Json,
+            check_rev: bool = True,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_old: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Replace a vertex document.
 
@@ -2809,13 +2810,13 @@ class VertexCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def delete(
-        self,
-        vertex: Union[str, Json],
-        rev: Optional[str] = None,
-        check_rev: bool = True,
-        ignore_missing: bool = False,
-        sync: Optional[bool] = None,
-        return_old: bool = False,
+            self,
+            vertex: Union[str, Json],
+            rev: Optional[str] = None,
+            check_rev: bool = True,
+            ignore_missing: bool = False,
+            sync: Optional[bool] = None,
+            return_old: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Delete a vertex document. All connected edges are also deleted.
 
@@ -2882,7 +2883,7 @@ class EdgeCollection(Collection):
     """
 
     def __init__(
-        self, connection: Connection, executor: ApiExecutor, graph: str, name: str
+            self, connection: Connection, executor: ApiExecutor, graph: str, name: str
     ) -> None:
         super().__init__(connection, executor, name)
         self._graph = graph
@@ -2900,7 +2901,7 @@ class EdgeCollection(Collection):
         return self._graph
 
     async def get(
-        self, edge: Union[str, Json], rev: Optional[str] = None, check_rev: bool = True
+            self, edge: Union[str, Json], rev: Optional[str] = None, check_rev: bool = True
     ) -> Result[Optional[Json]]:
         """Return an edge document.
 
@@ -2941,11 +2942,11 @@ class EdgeCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def insert(
-        self,
-        edge: Json,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_new: bool = False,
+            self,
+            edge: Json,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Insert a new edge document.
 
@@ -2991,14 +2992,14 @@ class EdgeCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def update(
-        self,
-        edge: Json,
-        check_rev: bool = True,
-        keep_none: bool = True,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_old: bool = False,
-        return_new: bool = False,
+            self,
+            edge: Json,
+            check_rev: bool = True,
+            keep_none: bool = True,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_old: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Update an edge document.
 
@@ -3061,13 +3062,13 @@ class EdgeCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def replace(
-        self,
-        edge: Json,
-        check_rev: bool = True,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_old: bool = False,
-        return_new: bool = False,
+            self,
+            edge: Json,
+            check_rev: bool = True,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_old: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Replace an edge document.
 
@@ -3126,13 +3127,13 @@ class EdgeCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def delete(
-        self,
-        edge: Union[str, Json],
-        rev: Optional[str] = None,
-        check_rev: bool = True,
-        ignore_missing: bool = False,
-        sync: Optional[bool] = None,
-        return_old: bool = False,
+            self,
+            edge: Union[str, Json],
+            rev: Optional[str] = None,
+            check_rev: bool = True,
+            ignore_missing: bool = False,
+            sync: Optional[bool] = None,
+            return_old: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Delete an edge document.
 
@@ -3188,13 +3189,13 @@ class EdgeCollection(Collection):
         return await self._execute(request, response_handler)
 
     async def link(
-        self,
-        from_vertex: Union[str, Json],
-        to_vertex: Union[str, Json],
-        data: Optional[Json] = None,
-        sync: Optional[bool] = None,
-        silent: bool = False,
-        return_new: bool = False,
+            self,
+            from_vertex: Union[str, Json],
+            to_vertex: Union[str, Json],
+            data: Optional[Json] = None,
+            sync: Optional[bool] = None,
+            silent: bool = False,
+            return_new: bool = False,
     ) -> Result[Union[bool, Json]]:
         """Insert a new edge document linking the given vertices.
 
@@ -3225,7 +3226,7 @@ class EdgeCollection(Collection):
         return await self.insert(edge, sync=sync, silent=silent, return_new=return_new)
 
     async def edges(
-        self, vertex: Union[str, Json], direction: Optional[str] = None,allow_dirty_read: bool = False,
+            self, vertex: Union[str, Json], direction: Optional[str] = None, allow_dirty_read: bool = False,
     ) -> Result[Json]:
         """Return the edge documents coming in and/or out of the vertex.
 
